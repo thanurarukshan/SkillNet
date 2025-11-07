@@ -78,6 +78,25 @@ app.post("/api/signin", async (req: Request, res: Response) => {
   }
 });
 
+// from the student dashboard to get details
+app.get("/api/getStudentInfo", verifyToken, async (req, res) => {
+  try {
+    const token = req.headers.authorization; // already verified
+    const response = await fetch(`${BACKEND_BASE_URL}/api/getStudentInfo`, {
+      headers: {
+        Authorization: token!, // forward token to backend
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error("Gateway getStudentInfo error:", err);
+    res.status(500).json({ error: "Failed to fetch student info" });
+  }
+});
+
 app.get("/api/protected", verifyToken, (req, res) => {
   const user = (req as any).user;
   res.json({ message: `Welcome ${user.name}, you are a ${user.role}!` });
@@ -87,8 +106,8 @@ app.get("/api/protected", verifyToken, (req, res) => {
 //-----------------------accept data from frontend-------------------------------
 //add job
 app.post("/api/addJob", async (req: Request, res: Response) => {
+  console.log("Received form data at Gateway:", req.body);
   try {
-    console.log("Received form data at Gateway:", req.body);
 
     // const response = await fetch(`${BACKEND_BASE_URL}/api/addJob`, {
     //   method: "POST",
@@ -97,7 +116,7 @@ app.post("/api/addJob", async (req: Request, res: Response) => {
     // });
 
     // const data = await response.json();
-    // res.json(data);
+    res.json(req.body);
   } catch (err) {
     console.error("Error forwarding request:", err);
     res.status(500).json({ error: "Backend POST failed" });
@@ -106,10 +125,29 @@ app.post("/api/addJob", async (req: Request, res: Response) => {
 
 //add Project
 app.post("/api/addProject", async (req: Request, res: Response) => {
+  console.log("Received form data at Gateway:", req.body);
   try {
-    console.log("Received form data at Gateway:", req.body);
 
-    // const response = await fetch(`${BACKEND_BASE_URL}/api/addJob`, {
+    // const response = await fetch(`${BACKEND_BASE_URL}/api/addProject`, {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify(req.body),
+    // });
+
+    // const data = await response.json();
+    res.json(req.body);
+  } catch (err) {
+    console.error("Error forwarding request:", err);
+    res.status(500).json({ error: "Backend POST failed" });
+  }
+});
+
+//edit Profile
+app.post("/api/editProfile", async (req: Request, res: Response) => {
+  console.log("Received form data at Gateway:", req.body);
+  try {
+
+    // const response = await fetch(`${BACKEND_BASE_URL}/api/editProfile`, {
     //   method: "POST",
     //   headers: { "Content-Type": "application/json" },
     //   body: JSON.stringify(req.body),

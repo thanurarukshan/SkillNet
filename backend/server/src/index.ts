@@ -71,19 +71,48 @@ app.get("/api/hello", (req: Request, res: Response) => {
 
 // authentication and autherization
 // 🧾 Sign Up Route
+// app.post("/api/signup", async (req: Request, res: Response) => {
+//   try {
+//     const { role, name, email, password } = req.body;
+
+//     if (!role || !name || !email || !password) {
+//       return res.status(400).json({ error: "All fields are required." });
+//     }
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     const [result] = await pool.query(
+//       "INSERT INTO auth (category, name, username, password_hash) VALUES (?, ?, ?, ?)",
+//       [role, name, email, hashedPassword]
+//     );
+
+//     res.json({ message: "User registered successfully." });
+//   } catch (err: any) {
+//     if (err.code === "ER_DUP_ENTRY") {
+//       res.status(400).json({ error: "Email already exists." });
+//     } else {
+//       console.error("Signup Error:", err);
+//       res.status(500).json({ error: "Server error." });
+//     }
+//   }
+// });
+// 🧾 Sign Up Route
 app.post("/api/signup", async (req: Request, res: Response) => {
   try {
-    const { role, name, email, password } = req.body;
+    const { role, name, email, password, department, academicYear } = req.body;
 
+    // Validate required fields
     if (!role || !name || !email || !password) {
-      return res.status(400).json({ error: "All fields are required." });
+      return res.status(400).json({ error: "Role, name, email, and password are required." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Insert into MySQL
     const [result] = await pool.query(
-      "INSERT INTO auth (category, name, username, password_hash) VALUES (?, ?, ?, ?)",
-      [role, name, email, hashedPassword]
+      `INSERT INTO auth (category, name, department, acadamic_year, username, password_hash)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [role, name, department || null, academicYear || null, email, hashedPassword]
     );
 
     res.json({ message: "User registered successfully." });
@@ -96,6 +125,7 @@ app.post("/api/signup", async (req: Request, res: Response) => {
     }
   }
 });
+
 
 // 🔐 Sign In Route
 // app.post("/api/signin", async (req: Request, res: Response) => {
@@ -164,6 +194,35 @@ app.post("/api/signin", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Server error during signin" });
   }
 });
+
+// from student dashbaord to get details
+app.get("/api/getStudentInfo", async (req: Request, res: Response) => {
+  try {
+    // ✅ Extract and verify JWT token
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing Authorization header" });
+
+    const token = authHeader.split(" ")[1]; // could still be undefined
+    if (!token) return res.status(401).json({ error: "Missing token" });
+
+    // token is guaranteed to be a string
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    // ✅ Fetch user data from DB (except password)
+    const [rows]: any = await pool.query(
+      "SELECT id, name, category AS role, department, acadamic_year, username FROM auth WHERE id = ?",
+      [decoded.id]
+    );
+
+    if (!rows.length) return res.status(404).json({ error: "User not found" });
+
+    res.json({ user: rows[0] });
+  } catch (err) {
+    console.error("Error fetching student info:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 
 // Start server
 app.listen(PORT, () => {

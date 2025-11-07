@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Tabs,
   Tab,
@@ -15,7 +15,9 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  IconButton,
 } from "@mui/material";
+import { Add } from "@mui/icons-material";
 
 export default function StudentDashboard() {
   const [studentInfo, setStudentInfo] = useState({
@@ -26,12 +28,53 @@ export default function StudentDashboard() {
     avatar: "https://i.pravatar.cc/150?img=3",
   });
 
-  const skills = [
+  useEffect(() => {
+    const fetchStudentInfo = async () => {
+      try {
+        const token = localStorage.getItem("token"); // JWT saved during login
+        if (!token) {
+          console.error("No token found");
+          return;
+        }
+
+        const res = await fetch("http://localhost:5000/api/getStudentInfo", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          console.error("Failed to fetch student info");
+          return;
+        }
+
+        const data = await res.json();
+        console.log("Student info from API:", data);
+
+        // Map backend fields to frontend state
+        setStudentInfo({
+          name: data.user.name || "",
+          email: data.user.username || "",
+          major: data.user.department || "N/A",
+          year: data.user.acadamic_year || "N/A",
+          avatar: "https://i.pravatar.cc/150?img=3", // optionally fetch real avatar if available
+        });
+      } catch (err) {
+        console.error("Error fetching student info:", err);
+      }
+    };
+
+    fetchStudentInfo();
+  }, []);
+
+  const [skills, setSkills] = useState([
     { name: "React", verified: true },
     { name: "TypeScript", verified: false },
     { name: "Node.js", verified: true },
     { name: "Docker", verified: false },
-  ];
+  ]);
 
   const [teamSuggestions, setTeamSuggestions] = useState([
     { id: 1, name: "Team Alpha", members: ["Alice", "Bob"], joined: false },
@@ -50,6 +93,33 @@ export default function StudentDashboard() {
   const [tabIndex, setTabIndex] = useState(0);
   const [openEdit, setOpenEdit] = useState(false);
 
+  // ✅ New states for skills modal
+  const [openSkills, setOpenSkills] = useState(false);
+  const [newSkill, setNewSkill] = useState("");
+
+  const handleSaveProfile = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/editProfile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(studentInfo),
+      });
+
+      if (!res.ok) {
+        console.error("Failed to send profile data");
+        return;
+      }
+
+      const data = await res.json();
+      console.log("Response from gateway:", data);
+
+      (document.activeElement as HTMLElement)?.blur();
+      setOpenEdit(false);
+    } catch (err) {
+      console.error("Error sending to API Gateway:", err);
+    }
+  };
+
   const handleJoinTeam = (id: number) => {
     const team = teamSuggestions.find((t) => t.id === id);
     if (team) {
@@ -66,6 +136,19 @@ export default function StudentDashboard() {
     }
   };
 
+  // ✅ Add new skill
+  const handleAddSkill = () => {
+    if (newSkill.trim() !== "") {
+      setSkills([...skills, { name: newSkill, verified: false }]);
+      setNewSkill("");
+    }
+  };
+
+  // ✅ Remove skill
+  const handleRemoveSkill = (name: string) => {
+    setSkills(skills.filter((s) => s.name !== name));
+  };
+
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <h1 className="text-4xl font-bold mb-6 text-center">Student Dashboard</h1>
@@ -78,7 +161,9 @@ export default function StudentDashboard() {
             <div>
               <Typography variant="h5">{studentInfo.name}</Typography>
               <Typography variant="body1">{studentInfo.email}</Typography>
-              <Typography variant="body2">{studentInfo.major} - {studentInfo.year}</Typography>
+              <Typography variant="body2">
+                {studentInfo.major} - {studentInfo.year}
+              </Typography>
             </div>
           </div>
           <Button variant="contained" color="primary" onClick={() => setOpenEdit(true)}>
@@ -118,38 +203,76 @@ export default function StudentDashboard() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenEdit(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setOpenEdit(false)}>
+          <Button variant="contained" onClick={handleSaveProfile}>
             Save
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Tabs */}
-      <Tabs
-        value={tabIndex}
-        onChange={(_, newValue) => setTabIndex(newValue)}
-        centered
-        className="mb-6"
-      >
+      <Tabs value={tabIndex} onChange={(_, newValue) => setTabIndex(newValue)} centered className="mb-6">
         <Tab label="Skills" />
         <Tab label="Teams" />
         <Tab label="Job Requests" />
       </Tabs>
 
-      {/* Tab Panels */}
+      {/* Skills Tab with "Manage Skills" Button */}
       {tabIndex === 0 && (
-        <div className="flex flex-wrap justify-center gap-2 mb-6">
-          {skills.map((skill, index) => (
-            <Chip
-              key={index}
-              label={skill.name}
-              color={skill.verified ? "success" : "default"}
-              variant={skill.verified ? "filled" : "outlined"}
-            />
-          ))}
+        <div className="flex flex-col items-center gap-4 mb-6">
+          <div className="flex flex-wrap justify-center gap-2">
+            {skills.map((skill, index) => (
+              <Chip
+                key={index}
+                label={skill.name}
+                color={skill.verified ? "success" : "default"}
+                variant={skill.verified ? "filled" : "outlined"}
+              />
+            ))}
+          </div>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<Add />}
+            onClick={() => setOpenSkills(true)}
+          >
+            Manage Skills
+          </Button>
         </div>
       )}
 
+      {/* Skills Management Dialog */}
+      <Dialog open={openSkills} onClose={() => setOpenSkills(false)}>
+        <DialogTitle>Manage Skills</DialogTitle>
+        <DialogContent className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {skills.map((skill) => (
+              <Chip
+                key={skill.name}
+                label={skill.name}
+                onDelete={() => handleRemoveSkill(skill.name)}
+                color={skill.verified ? "success" : "default"}
+              />
+            ))}
+          </div>
+
+          <div className="flex space-x-2 mt-4">
+            <TextField
+              label="Add Skill"
+              fullWidth
+              value={newSkill}
+              onChange={(e) => setNewSkill(e.target.value)}
+            />
+            <Button variant="contained" onClick={handleAddSkill}>
+              Add
+            </Button>
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenSkills(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Teams Tab */}
       {tabIndex === 1 && (
         <div className="mb-6 max-w-6xl mx-auto">
           <div className="flex justify-between mb-4">
@@ -185,7 +308,6 @@ export default function StudentDashboard() {
             ))}
           </div>
 
-          {/* Joined Teams */}
           <Typography variant="h6" className="mb-2">
             Joined Teams
           </Typography>
@@ -204,6 +326,7 @@ export default function StudentDashboard() {
         </div>
       )}
 
+      {/* Job Requests Tab */}
       {tabIndex === 2 && (
         <div className="flex flex-wrap justify-center gap-4 max-w-6xl mx-auto mb-6">
           {jobRequests.map((job) => (

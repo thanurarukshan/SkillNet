@@ -50,8 +50,9 @@ export default function CompanyDashboard() {
 
   const handleSubmit = async () => {
     if (!newItem[formFields[0].name]) return;
-    // console.log("Response from gateway:", newItem[formFields[0].name]); // optional server log);
+    console.log("Response from gateway:", newItem[formFields[0].name]); // optional server log);
     try {
+      console.log("started"); // optional server log);
       const res = await fetch("http://localhost:5000/api/addJob", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

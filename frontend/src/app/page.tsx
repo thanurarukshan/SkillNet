@@ -11,16 +11,129 @@ import {
   Tabs,
   Tab,
 } from "@mui/material";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [openSignIn, setOpenSignIn] = useState(false);
   const [openSignUp, setOpenSignUp] = useState(false);
   const [roleTab, setRoleTab] = useState(0); // 0: Student, 1: SME, 2: Company
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [department, setDepartment] = useState("");
+  const [academicYear, setAcademicYear] = useState("");
+
+  const router = useRouter();
 
   const handleSignInOpen = () => setOpenSignIn(true);
   const handleSignInClose = () => setOpenSignIn(false);
   const handleSignUpOpen = () => setOpenSignUp(true);
   const handleSignUpClose = () => setOpenSignUp(false);
+
+  const getRole = () => {
+    if (roleTab === 0) return "Student";
+    if (roleTab === 1) return "SME";
+    return "Company";
+  };
+
+  // ---------- SIGN UP ----------
+  // const handleSignUp = async () => {
+  //   const payload = {
+  //     role: getRole(),
+  //     name,
+  //     email,
+  //     password,
+  //   };
+
+  //   try {
+  //     const res = await fetch("http://localhost:5000/api/signup", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify(payload),
+  //     });
+
+  //     const data = await res.json();
+  //     if (res.ok) {
+  //       alert("Signup successful! Please sign in.");
+  //       setOpenSignUp(false);
+  //       setOpenSignIn(true);
+  //     } else {
+  //       alert(data.error || "Signup failed.");
+  //     }
+  //   } catch (err) {
+  //     console.error(err);
+  //     alert("Error signing up.");
+  //   }
+  // };
+
+  const handleSignUp = async () => {
+    const payload: any = {
+      role: getRole(),
+      name,
+      email,
+      password,
+    };
+
+    // Only include for Students
+    if (getRole() === "Student") {
+      payload.department = department;
+      payload.academicYear = academicYear;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert("Signup successful! Please sign in.");
+        setOpenSignUp(false);
+        setOpenSignIn(true);
+      } else {
+        alert(data.error || "Signup failed.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error signing up.");
+    }
+  };
+
+
+  // ---------- SIGN IN ----------
+  const handleSignIn = async () => {
+    const payload = {
+      email,
+      password,
+    };
+
+    try {
+      const res = await fetch("http://localhost:5000/api/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        // Redirect based on role
+        const role = data.user.role;
+        if (role === "Student") router.push("/student");
+        else if (role === "SME") router.push("/sme");
+        else if (role === "Company") router.push("/companies");
+      } else {
+        alert(data.error || "Invalid credentials.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error signing in.");
+    }
+  };
 
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col">
@@ -40,44 +153,21 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 px-4 max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-12">Platform Features</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="p-6 bg-white rounded-lg shadow text-center">
-            <h3 className="text-xl font-semibold mb-2">Manage Teams</h3>
-            <p>Students and SMEs can create and join teams to collaborate efficiently on projects.</p>
-          </div>
-          <div className="p-6 bg-white rounded-lg shadow text-center">
-            <h3 className="text-xl font-semibold mb-2">Track Projects</h3>
-            <p>Companies can post projects, and teams can apply to work, track progress, and deliver results.</p>
-          </div>
-          <div className="p-6 bg-white rounded-lg shadow text-center">
-            <h3 className="text-xl font-semibold mb-2">Role-based Access</h3>
-            <p>Students, SMEs, and companies have customized dashboards and functionalities based on their roles.</p>
-          </div>
-        </div>
-      </section>
-
       {/* Sign In Dialog */}
       <Dialog open={openSignIn} onClose={handleSignInClose}>
         <DialogTitle>Sign In</DialogTitle>
         <DialogContent className="space-y-4">
-          <Tabs
-            value={roleTab}
-            onChange={(_, value) => setRoleTab(value)}
-            variant="fullWidth"
-          >
+          <Tabs value={roleTab} onChange={(_, v) => setRoleTab(v)} variant="fullWidth">
             <Tab label="Student" />
             <Tab label="SME" />
             <Tab label="Company" />
           </Tabs>
-          <TextField label="Email" type="email" fullWidth />
-          <TextField label="Password" type="password" fullWidth />
+          <TextField label="Email" type="email" fullWidth value={email} onChange={(e) => setEmail(e.target.value)} />
+          <TextField label="Password" type="password" fullWidth value={password} onChange={(e) => setPassword(e.target.value)} />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleSignInClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleSignInClose}>Sign In</Button>
+          <Button variant="contained" onClick={handleSignIn}>Sign In</Button>
         </DialogActions>
       </Dialog>
 
@@ -85,22 +175,35 @@ export default function Home() {
       <Dialog open={openSignUp} onClose={handleSignUpClose}>
         <DialogTitle>Sign Up</DialogTitle>
         <DialogContent className="space-y-4">
-          <Tabs
-            value={roleTab}
-            onChange={(_, value) => setRoleTab(value)}
-            variant="fullWidth"
-          >
+          <Tabs value={roleTab} onChange={(_, v) => setRoleTab(v)} variant="fullWidth">
             <Tab label="Student" />
             <Tab label="SME" />
             <Tab label="Company" />
           </Tabs>
-          <TextField label="Name" fullWidth />
-          <TextField label="Email" type="email" fullWidth />
-          <TextField label="Password" type="password" fullWidth />
+          <TextField label="Name" fullWidth value={name} onChange={(e) => setName(e.target.value)} />
+          <TextField label="Email" type="email" fullWidth value={email} onChange={(e) => setEmail(e.target.value)} />
+          <TextField label="Password" type="password" fullWidth value={password} onChange={(e) => setPassword(e.target.value)} />
+          {/* Only show for Students */}
+          {getRole() === "Student" && (
+            <>
+              <TextField
+                label="Department"
+                fullWidth
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+              />
+              <TextField
+                label="Academic Year"
+                fullWidth
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+              />
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleSignUpClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleSignUpClose}>Sign Up</Button>
+          <Button variant="contained" onClick={handleSignUp}>Sign Up</Button>
         </DialogActions>
       </Dialog>
     </main>
