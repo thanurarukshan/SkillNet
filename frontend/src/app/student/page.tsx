@@ -25,7 +25,7 @@ export default function StudentDashboard() {
     email: "john.doe@example.com",
     major: "Computer Science",
     year: "3rd Year",
-    avatar: "https://i.pravatar.cc/150?img=3",
+    avatar: "data:image/png;base64,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",
   });
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export default function StudentDashboard() {
         });
 
         if (!res.ok) {
-          console.error("Failed to fetch student info");
+          console.log("Failed to fetch student info");
           return;
         }
 
@@ -93,32 +93,46 @@ export default function StudentDashboard() {
   const [tabIndex, setTabIndex] = useState(0);
   const [openEdit, setOpenEdit] = useState(false);
 
-  // ✅ New states for skills modal
+  //  New states for skills modal
   const [openSkills, setOpenSkills] = useState(false);
   const [newSkill, setNewSkill] = useState("");
 
   const handleSaveProfile = async () => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
+
       const res = await fetch("http://localhost:5000/api/editProfile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(studentInfo),
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: studentInfo.name,
+          department: studentInfo.major,
+          acadamic_year: studentInfo.year,
+        }),
       });
 
       if (!res.ok) {
-        console.error("Failed to send profile data");
+        const errText = await res.text();
+        console.error("Failed to update profile:", errText);
         return;
       }
 
       const data = await res.json();
-      console.log("Response from gateway:", data);
+      console.log("Profile updated successfully:", data);
 
-      (document.activeElement as HTMLElement)?.blur();
       setOpenEdit(false);
     } catch (err) {
-      console.error("Error sending to API Gateway:", err);
+      console.error("Error updating profile:", err);
     }
   };
+
 
   const handleJoinTeam = (id: number) => {
     const team = teamSuggestions.find((t) => t.id === id);

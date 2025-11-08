@@ -223,6 +223,71 @@ app.get("/api/getStudentInfo", async (req: Request, res: Response) => {
   }
 });
 
+app.put("/api/editProfile", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Missing token" });
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new Error("JWT_SECRET not set");
+
+    const decoded: any = jwt.verify(token, jwtSecret);
+
+    const { name, department, acadamic_year } = req.body;
+
+    const [result]: any = await pool.query(
+      "UPDATE auth SET name = ?, department = ?, acadamic_year = ? WHERE id = ?",
+      [name, department, acadamic_year, decoded.id]
+    );
+
+    if (result.affectedRows === 0)
+      return res.status(404).json({ error: "User not found" });
+
+    res.json({ message: "Profile updated successfully" });
+  } catch (err) {
+    console.error("EditProfile Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// from sme dashbaord to get details
+app.post("/api/addProject", async (req: Request, res: Response) => {
+  console.log("AddProject:",req.body);
+  console.log("AddProject:1",req.headers.authorization);
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+    
+    const token = authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Missing token" });
+    console.log("AddProject:2");
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new Error("JWT_SECRET not set");
+    console.log("AddProject:3");
+    const decoded: any = jwt.verify(token, jwtSecret);
+
+    // const { name, department, acadamic_year } = req.body;
+
+    // const [result]: any = await pool.query(
+    //   "UPDATE auth SET name = ?, department = ?, acadamic_year = ? WHERE id = ?",
+    //   [name, department, acadamic_year, decoded.id]
+    // );
+
+    // if (result.affectedRows === 0)
+    //   return res.status(404).json({ error: "User not found" });
+    console.log("AddProject:4");
+    res.json({ message: "Project created successfully" });
+  } catch (err) {
+    console.error("AddProject Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
 
 // Start server
 app.listen(PORT, () => {
