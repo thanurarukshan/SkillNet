@@ -172,11 +172,12 @@ app.post("/api/addJob", verifyToken, async (req: Request, res: Response) => {
 app.get("/api/getSmeInfo", verifyToken, async (req, res) => {
   try {
     const token = req.headers.authorization;
-    const response = await fetch(`${BACKEND_BASE_URL}/api/getSmeInfo`, {
-      headers: { Authorization: token!, "Content-Type": "application/json" },
-    });
-    const data = await response.json();
-    res.status(response.status).json(data);
+    console.log("x:", token);
+    // const response = await fetch(`${BACKEND_BASE_URL}/api/getSmeInfo`, {
+    //   headers: { Authorization: token!, "Content-Type": "application/json" },
+    // });
+    // const data = await response.json();
+    // res.status(response.status).json(data);
   } catch (err) {
     console.error("Gateway getSmeInfo error:", err);
     res.status(500).json({ error: "Failed to fetch Sme info" });

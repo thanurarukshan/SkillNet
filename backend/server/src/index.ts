@@ -29,7 +29,7 @@ const PORT = process.env.PORT || 5001;
 
 // Validate environment variables at startup
 if (!process.env.DB_HOST || !process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME) {
-  throw new Error("❌ Missing required database environment variables in .env file");
+  throw new Error("Missing required database environment variables in .env file");
 }
 
 // Define pool options with non-optional strings
@@ -52,13 +52,13 @@ app.get("/api/db-test", async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.query("SHOW TABLES");
     res.json({
-      message: "✅ Database connection successful!",
+      message: "Database connection successful!",
       tables: rows,
     });
   } catch (error: any) {
     console.error("Database connection failed:", error.message);
     res.status(500).json({
-      message: "❌ Database connection failed",
+      message: "Database connection failed",
       error: error.message,
     });
   }
@@ -254,6 +254,34 @@ app.put("/api/editProfile", async (req: Request, res: Response) => {
 });
 
 // from sme dashbaord to get details
+app.get("/api/getSmeInfo", async (req: Request, res: Response) => {
+  try {
+    // ✅ Extract and verify JWT token
+    const authHeader = req.headers.authorization;
+    console.log("y", authHeader);
+    if (!authHeader) return res.status(401).json({ error: "Missing Authorization header" });
+
+    const token = authHeader.split(" ")[1]; // could still be undefined
+    if (!token) return res.status(401).json({ error: "Missing token" });
+
+    // token is guaranteed to be a string
+    // const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    // // ✅ Fetch user data from DB (except password)
+    // const [rows]: any = await pool.query(
+    //   "SELECT id, name, category AS role, department, acadamic_year, username FROM auth WHERE id = ?",
+    //   [decoded.id]
+    // );
+
+    // if (!rows.length) return res.status(404).json({ error: "User not found" });
+
+    // res.json({ user: rows[0] });
+  } catch (err) {
+    console.error("Error fetching student info:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 app.post("/api/addProject", async (req: Request, res: Response) => {
   console.log("AddProject:",req.body);
   console.log("AddProject:1",req.headers.authorization);

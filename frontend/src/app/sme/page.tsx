@@ -58,7 +58,7 @@ export default function SmeDashboard() {
         });
 
         if (!res.ok) {
-          console.log("Failed to fetch student info");
+          console.log("Failed to fetch sme info");
           return;
         }
 
@@ -148,7 +148,7 @@ export default function SmeDashboard() {
       {/* Info Card */}
       <Card className="mb-6 max-w-3xl mx-auto">
         <CardContent>
-          {Object.entries(info).map(([key, value]) => (
+          {Object.entries(smeInfo).map(([key, value]) => (
             <Typography key={key} variant="body2">
               <strong>{key}:</strong> {value}
             </Typography>
