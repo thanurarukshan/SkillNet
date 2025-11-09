@@ -24,16 +24,16 @@ import { Add } from "@mui/icons-material";
 
 export default function SmeDashboard() {
   const [smeInfo, setSmeInfo] = useState({
-    Name: "Acme SME",
-    Email: "contact@acme.com",
-    Sector: "Tech Consulting",
-    "Active Projects": 2,
+    name: "Acme SME",
+    email: "contact@acme.com",
+    sector: "Tech Consulting",
+    actvProjects: 2,
   });
   // --- Props that were passed into DashboardLayout ---
   const title = "SME Dashboard";
 
   const panelName = "My Projects";
-  
+
   const formFields = [
     { name: "name", label: "Project Name" },
     { name: "skills", label: "Required Skills" },
@@ -66,19 +66,18 @@ export default function SmeDashboard() {
         console.log("Student info from API:", data);
 
         // Map backend fields to frontend state
-        setItems({
+        setSmeInfo({
           name: data.user.name || "",
           email: data.user.username || "",
-          major: data.user.department || "N/A",
-          year: data.user.acadamic_year || "N/A",
-          avatar: "https://i.pravatar.cc/150?img=3", // optionally fetch real avatar if available
+          sector: data.user.department || "N/A",
+          actvProjects: 2,
         });
       } catch (err) {
         console.error("Error fetching student info:", err);
       }
     };
 
-    fetchStudentInfo();
+    fetchSmeInfo();
   }, []);
 
   // --- State management (from DashboardLayout) ---
