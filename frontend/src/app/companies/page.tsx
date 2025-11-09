@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Tabs,
   Tab,
@@ -19,57 +19,121 @@ import {
   DialogActions,
   TextField,
   Divider,
+  CircularProgress,
 } from "@mui/material";
 
 export default function CompanyDashboard() {
-  // --- Dashboard Data (was passed into DashboardLayout) ---
   const title = "Company Dashboard";
-  const info = {
-    Name: "TechCorp Ltd.",
-    Email: "hr@techcorp.com",
-    Industry: "Software",
-    "Open Positions": 3,
-  };
   const panelName = "Jobs";
   const formFields = [
     { name: "name", label: "Job Name", type: "text" },
-    { name: "skills", label: "Required Skills",type: "text" },
-    { name: "expLevel", label: "Experience Level",type: "text" },
+    { name: "skills", label: "Required Skills", type: "text" },
+    { name: "expLevel", label: "Experience Level", type: "text" },
   ];
 
   // --- States ---
   const [tabIndex, setTabIndex] = useState(0);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [openEditProfile, setOpenEditProfile] = useState(false);
+  const [profileEdit, setProfileEdit] = useState<any>({});
   const [items, setItems] = useState<any[]>([]);
   const [openCreate, setOpenCreate] = useState(false);
   const [openDetails, setOpenDetails] = useState<null | number>(null);
   const [newItem, setNewItem] = useState<Record<string, string>>({});
   const [editMode, setEditMode] = useState(false);
 
+  // --- Fetch Company Info ---
+  const fetchCompanyInfo = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return alert("No token found. Please log in again.");
+
+    try {
+      const res = await fetch("http://localhost:5000/api/getStudentInfo", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setCompanyInfo(data.user);
+        setProfileEdit(data.user);
+      } else {
+        console.error("Error fetching profile:", data.error);
+        alert(data.error || "Failed to fetch company profile");
+      }
+    } catch (err) {
+      console.error("Error fetching company profile:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompanyInfo();
+  }, []);
+
+  // --- Handle Profile Edit ---
+  const handleProfileChange = (field: string, value: string) =>
+    setProfileEdit({ ...profileEdit, [field]: value });
+
+  const handleProfileSubmit = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return alert("No token found.");
+
+    try {
+      const res = await fetch("http://localhost:5000/api/editProfile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(profileEdit),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert("Company profile updated successfully!");
+        setCompanyInfo(profileEdit);
+        setOpenEditProfile(false);
+      } else {
+        alert(data.error || "Failed to update company profile");
+      }
+    } catch (err) {
+      console.error("Error updating company profile:", err);
+    }
+  };
+
+  // --- Job Handling ---
   const handleChange = (field: string, value: string) =>
     setNewItem({ ...newItem, [field]: value });
 
   const handleSubmit = async () => {
     if (!newItem[formFields[0].name]) return;
-    console.log("Response from gateway:", newItem[formFields[0].name]); // optional server log);
+    const token = localStorage.getItem("token");
+    if (!token) return alert("No token found.");
+
     try {
-      console.log("started"); // optional server log);
       const res = await fetch("http://localhost:5000/api/addJob", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(newItem),
       });
-      console.log("ended"); // optional server log);
       const data = await res.json();
-      console.log("Response from gateway:", data.message); // optional browser log
+      if (res.ok) {
+        console.log("Job added:", data.message);
+        setItems([...items, newItem]);
+        setNewItem({});
+        setOpenCreate(false);
+      } else {
+        alert(data.error || "Failed to add job");
+      }
     } catch (err) {
       console.error("Error sending to API Gateway:", err);
     }
-
-    // Add item locally for display
-    setItems([...items, newItem]);
-    setNewItem({});
-    setOpenCreate(false);
-
   };
 
   const handleUpdate = () => {
@@ -80,27 +144,45 @@ export default function CompanyDashboard() {
     setEditMode(false);
   };
 
-  // Mock students (could be applicants)
+  // Mock students (applicants)
   const students = [
     { name: "Alice", skills: "React, Node.js" },
     { name: "Bob", skills: "Python, ML" },
     { name: "Charlie", skills: "UI/UX, Figma" },
   ];
 
+  if (loading)
+    return (
+      <main className="flex justify-center items-center min-h-screen">
+        <CircularProgress />
+      </main>
+    );
+
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <h1 className="text-4xl font-bold mb-6 text-center">{title}</h1>
 
-      {/* Info Card */}
-      <Card className="mb-6 max-w-3xl mx-auto">
-        <CardContent>
-          {Object.entries(info).map(([key, value]) => (
-            <Typography key={key} variant="body2">
-              <strong>{key}:</strong> {value}
-            </Typography>
-          ))}
-        </CardContent>
-      </Card>
+      {/* --- Company Info Card --- */}
+      {companyInfo && (
+        <Card className="mb-6 max-w-3xl mx-auto">
+          <CardContent>
+            {Object.entries(companyInfo).map(([key, value]) => (
+              <Typography key={key} variant="body2" sx={{ mb: 1 }}>
+                <strong>{key}:</strong> {String(value)}
+              </Typography>
+            ))}
+            <div className="flex justify-end mt-4">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => setOpenEditProfile(true)}
+              >
+                Edit Profile
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Tabs
@@ -167,7 +249,30 @@ export default function CompanyDashboard() {
         </Card>
       )}
 
-      {/* Create Job Dialog */}
+      {/* --- Edit Profile Dialog --- */}
+      <Dialog open={openEditProfile} onClose={() => setOpenEditProfile(false)}>
+        <DialogTitle>Edit Profile</DialogTitle>
+        <DialogContent>
+          {["name", "industry", "username"].map((field) => (
+            <TextField
+              key={field}
+              margin="dense"
+              label={field.charAt(0).toUpperCase() + field.slice(1)}
+              fullWidth
+              value={profileEdit[field] || ""}
+              onChange={(e) => handleProfileChange(field, e.target.value)}
+            />
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEditProfile(false)}>Cancel</Button>
+          <Button onClick={handleProfileSubmit} variant="contained">
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* --- Create Job Dialog --- */}
       <Dialog open={openCreate} onClose={() => setOpenCreate(false)}>
         <DialogTitle>Create New {panelName.slice(0, -1)}</DialogTitle>
         <DialogContent>
@@ -178,9 +283,6 @@ export default function CompanyDashboard() {
               label={field.label}
               type={field.type || "text"}
               fullWidth
-              InputLabelProps={
-                field.type === "date" ? { shrink: true } : undefined
-              }
               value={newItem[field.name] || ""}
               onChange={(e) => handleChange(field.name, e.target.value)}
             />
@@ -194,7 +296,7 @@ export default function CompanyDashboard() {
         </DialogActions>
       </Dialog>
 
-      {/* Job Details Dialog */}
+      {/* --- Job Details Dialog --- */}
       <Dialog
         open={openDetails !== null}
         onClose={() => setOpenDetails(null)}
@@ -212,7 +314,6 @@ export default function CompanyDashboard() {
           </div>
         </DialogTitle>
         <DialogContent>
-          {/* Edit or View Form */}
           {formFields.map((field) => (
             <TextField
               key={field.name}
@@ -220,18 +321,12 @@ export default function CompanyDashboard() {
               label={field.label}
               type={field.type || "text"}
               fullWidth
-              InputLabelProps={
-                field.type === "date" ? { shrink: true } : undefined
-              }
               value={newItem[field.name] || ""}
               onChange={(e) => handleChange(field.name, e.target.value)}
               InputProps={{ readOnly: !editMode }}
             />
           ))}
-
           <Divider className="my-4" />
-
-          {/* Applicants (same mock data) */}
           <Typography variant="h6" className="mb-2">
             Potential Applicants
           </Typography>
