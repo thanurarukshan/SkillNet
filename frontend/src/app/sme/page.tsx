@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Tabs,
   Tab,
@@ -20,22 +20,65 @@ import {
   TextField,
   Divider,
 } from "@mui/material";
+import { Add } from "@mui/icons-material";
 
 export default function SmeDashboard() {
+  const [smeInfo, setSmeInfo] = useState({
+    name: "Acme SME",
+    email: "contact@acme.com",
+    sector: "Tech Consulting",
+    actvProjects: 2,
+  });
   // --- Props that were passed into DashboardLayout ---
   const title = "SME Dashboard";
-  const info = {
-    Name: "Acme SME",
-    Email: "contact@acme.com",
-    Sector: "Tech Consulting",
-    "Active Projects": 2,
-  };
+
   const panelName = "My Projects";
+
   const formFields = [
     { name: "name", label: "Project Name" },
     { name: "skills", label: "Required Skills" },
     { name: "deadline", label: "Deadline", type: "date" },
   ];
+
+  useEffect(() => {
+    const fetchSmeInfo = async () => {
+      try {
+        const token = localStorage.getItem("token"); // JWT saved during login
+        if (!token) {
+          console.error("No token found");
+          return;
+        }
+
+        const res = await fetch("http://localhost:5000/api/getSmeInfo", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          console.log("Failed to fetch student info");
+          return;
+        }
+
+        const data = await res.json();
+        console.log("Student info from API:", data);
+
+        // Map backend fields to frontend state
+        setSmeInfo({
+          name: data.user.name || "",
+          email: data.user.username || "",
+          sector: data.user.department || "N/A",
+          actvProjects: 2,
+        });
+      } catch (err) {
+        console.error("Error fetching student info:", err);
+      }
+    };
+
+    fetchSmeInfo();
+  }, []);
 
   // --- State management (from DashboardLayout) ---
   const [tabIndex, setTabIndex] = useState(0);
@@ -50,16 +93,29 @@ export default function SmeDashboard() {
 
   const handleSubmit = async () => {
     if (!newItem[formFields[0].name]) return;
-    console.log("Response from gateway:", newItem[formFields[0].name]); // optional server log);
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
       const res = await fetch("http://localhost:5000/api/addProject", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(newItem),
       });
       
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Failed to submit:", errText);
+        return;
+      }
+
       const data = await res.json();
-      console.log("Response from gateway:", data.message); // optional browser log
+      console.log("Response from gateway:", data.message);
 
     } catch (err) {
       console.error("Error sending to API Gateway:", err);
