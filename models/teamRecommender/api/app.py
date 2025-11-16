@@ -11,7 +11,8 @@ vectorizer = joblib.load("model/vectorizer.pkl")
 
 # MySQL connection config
 db_config = {
-    "host": "localhost",
+    # "host": "localhost",
+    "host": "localhost",  # instead of localhost, when deploying on docker
     "user": "skillnet",
     "password": "Skillnet@123",
     "database": "skillnet"
