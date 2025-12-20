@@ -15,7 +15,7 @@ const BACKEND_BASE_URL = "http://localhost:5001";
 
 // ✅ Allow requests from frontend
 app.use(cors({
-  origin: "http://localhost:3001",
+  origin: "http://localhost:3000",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
@@ -23,7 +23,7 @@ app.use(cors({
 app.use(express.json());
 
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "http://localhost:3001");
+  res.header("Access-Control-Allow-Origin", "http://localhost:3000");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.sendStatus(200);
@@ -184,17 +184,19 @@ app.get("/api/getSmeInfo", verifyToken, async (req, res) => {
   }
 });
 
-// Add Project
+// ✅ API GATEWAY FIX
 app.post("/api/addProject", verifyToken, async (req: Request, res: Response) => {
   try {
     const payload = req.body;
-    const response = await axios.put(`${BACKEND_BASE_URL}/api/addProject`, payload, {
+    // Changed .put to .post to match the Backend Server
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/addProject`, payload, {
       headers: { Authorization: req.headers.authorization! },
     });
     res.json(response.data);
   } catch (err: any) {
-    console.error("Gateway addProject error:", err.message);
-    res.status(500).json({ error: "Failed to add project" });
+    // Helpful log to see if the backend returned a specific error (like 404 or 500)
+    console.error("Gateway addProject error:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to add project" });
   }
 });
 
