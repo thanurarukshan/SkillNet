@@ -96,23 +96,70 @@ app.get("/api/hello", (req: Request, res: Response) => {
 //     }
 //   }
 // });
-// 🧾 Sign Up Route
+// 🧾 Sign Up Route - Enhanced for Role-Based Registration
 app.post("/api/signup", async (req: Request, res: Response) => {
   try {
-    const { role, name, email, password, department, academicYear } = req.body;
+    const {
+      role,
+      name,
+      email,
+      password,
+      department,
+      academicYear,
+      companyRegistrationNo,
+      companyType,
+      industry,
+      businessType
+    } = req.body;
 
     // Validate required fields
     if (!role || !name || !email || !password) {
       return res.status(400).json({ error: "Role, name, email, and password are required." });
     }
 
+    // Role-specific validation
+    if (role === "Company") {
+      if (!companyRegistrationNo || !companyType || !industry) {
+        return res.status(400).json({
+          error: "Company registration number, company type, and industry are required for companies."
+        });
+      }
+    } else if (role === "SME") {
+      if (!companyRegistrationNo || !industry || !businessType) {
+        return res.status(400).json({
+          error: "Registration number, industry, and business type are required for SMEs."
+        });
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert into MySQL
+    // Insert into MySQL with role-specific fields
     const [result] = await pool.query(
-      `INSERT INTO auth (category, name, department, acadamic_year, username, password_hash)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [role, name, department || null, academicYear || null, email, hashedPassword]
+      `INSERT INTO auth (
+        category, 
+        name, 
+        department, 
+        academic_year, 
+        username, 
+        password_hash,
+        company_registration_no,
+        company_type,
+        industry,
+        business_type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        role,
+        name,
+        role === "Student" ? department || null : null,
+        role === "Student" ? academicYear || null : null,
+        email,
+        hashedPassword,
+        (role === "Company" || role === "SME") ? companyRegistrationNo || null : null,
+        role === "Company" ? companyType || null : null,
+        (role === "Company" || role === "SME") ? industry || null : null,
+        role === "SME" ? businessType || null : null
+      ]
     );
 
     res.json({ message: "User registered successfully." });
@@ -195,22 +242,21 @@ app.post("/api/signin", async (req: Request, res: Response) => {
   }
 });
 
-// from student dashbaord to get details
+// from student dashboard to get details
 app.get("/api/getStudentInfo", async (req: Request, res: Response) => {
   try {
     // ✅ Extract and verify JWT token
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: "Missing Authorization header" });
 
-    const token = authHeader.split(" ")[1]; // could still be undefined
+    const token = authHeader.split(" ")[1];
     if (!token) return res.status(401).json({ error: "Missing token" });
 
-    // token is guaranteed to be a string
     const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
 
     // ✅ Fetch user data from DB (except password)
     const [rows]: any = await pool.query(
-      "SELECT id, name, category AS role, department, acadamic_year, username FROM auth WHERE id = ?",
+      "SELECT id, name, category AS role, department, academic_year, username FROM auth WHERE id = ?",
       [decoded.id]
     );
 
@@ -223,6 +269,7 @@ app.get("/api/getStudentInfo", async (req: Request, res: Response) => {
   }
 });
 
+// Edit Profile - Generic for all roles
 app.put("/api/editProfile", async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
@@ -231,16 +278,39 @@ app.put("/api/editProfile", async (req: Request, res: Response) => {
     const token = authHeader.split(" ")[1];
     if (!token) return res.status(401).json({ error: "Missing token" });
 
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) throw new Error("JWT_SECRET not set");
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
 
-    const decoded: any = jwt.verify(token, jwtSecret);
+    const {
+      name,
+      department,
+      academic_year,
+      company_registration_no,
+      company_type,
+      industry,
+      business_type
+    } = req.body;
 
-    const { name, department, acadamic_year } = req.body;
-
+    // Update all fields that are provided
     const [result]: any = await pool.query(
-      "UPDATE auth SET name = ?, department = ?, acadamic_year = ? WHERE id = ?",
-      [name, department, acadamic_year, decoded.id]
+      `UPDATE auth SET 
+        name = ?, 
+        department = ?, 
+        academic_year = ?,
+        company_registration_no = ?,
+        company_type = ?,
+        industry = ?,
+        business_type = ?
+      WHERE id = ?`,
+      [
+        name || null,
+        department || null,
+        academic_year || null,
+        company_registration_no || null,
+        company_type || null,
+        industry || null,
+        business_type || null,
+        decoded.id
+      ]
     );
 
     if (result.affectedRows === 0)
@@ -253,42 +323,143 @@ app.put("/api/editProfile", async (req: Request, res: Response) => {
   }
 });
 
-// from sme dashbaord to get details
-app.get("/api/getSmeInfo", async (req: Request, res: Response) => {
+// Change Password
+app.put("/api/changePassword", async (req: Request, res: Response) => {
   try {
-    // ✅ Extract and verify JWT token
     const authHeader = req.headers.authorization;
-    console.log("y", authHeader);
-    if (!authHeader) return res.status(401).json({ error: "Missing Authorization header" });
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
 
-    const token = authHeader.split(" ")[1]; // could still be undefined
+    const token = authHeader.split(" ")[1];
     if (!token) return res.status(401).json({ error: "Missing token" });
 
-    // token is guaranteed to be a string
-    // const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+    const { currentPassword, newPassword } = req.body;
 
-    // // ✅ Fetch user data from DB (except password)
-    // const [rows]: any = await pool.query(
-    //   "SELECT id, name, category AS role, department, acadamic_year, username FROM auth WHERE id = ?",
-    //   [decoded.id]
-    // );
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current and new passwords are required" });
+    }
 
-    // if (!rows.length) return res.status(404).json({ error: "User not found" });
+    // Fetch current password hash
+    const [rows]: any = await pool.query(
+      "SELECT password_hash FROM auth WHERE id = ?",
+      [decoded.id]
+    );
 
-    // res.json({ user: rows[0] });
+    if (!rows.length) return res.status(404).json({ error: "User not found" });
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await pool.query(
+      "UPDATE auth SET password_hash = ? WHERE id = ?",
+      [hashedNewPassword, decoded.id]
+    );
+
+    res.json({ message: "Password changed successfully" });
   } catch (err) {
-    console.error("Error fetching student info:", err);
+    console.error("ChangePassword Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Delete User Account
+app.delete("/api/deleteUser", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Missing token" });
+
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    // Delete user (cascade will handle related data)
+    const [result]: any = await pool.query(
+      "DELETE FROM auth WHERE id = ?",
+      [decoded.id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ message: "User account deleted successfully" });
+  } catch (err) {
+    console.error("DeleteUser Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// from sme dashboard to get details
+app.get("/api/getSmeInfo", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing Authorization header" });
+
+    const token = authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Missing token" });
+
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    // Fetch SME data from DB
+    const [rows]: any = await pool.query(
+      `SELECT id, name, category AS role, username, 
+       company_registration_no, industry, business_type, created_at 
+       FROM auth WHERE id = ?`,
+      [decoded.id]
+    );
+
+    if (!rows.length) return res.status(404).json({ error: "User not found" });
+
+    res.json({ user: rows[0] });
+  } catch (err) {
+    console.error("Error fetching SME info:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// from company dashboard to get details
+app.get("/api/getCompanyInfo", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing Authorization header" });
+
+    const token = authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ error: "Missing token" });
+
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    // Fetch Company data from DB
+    const [rows]: any = await pool.query(
+      `SELECT id, name, category AS role, username,
+       company_registration_no, company_type, industry, created_at 
+       FROM auth WHERE id = ?`,
+      [decoded.id]
+    );
+
+    if (!rows.length) return res.status(404).json({ error: "User not found" });
+
+    res.json({ user: rows[0] });
+  } catch (err) {
+    console.error("Error fetching company info:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
 app.post("/api/addProject", async (req: Request, res: Response) => {
-  console.log("AddProject:",req.body);
-  console.log("AddProject:1",req.headers.authorization);
+  console.log("AddProject:", req.body);
+  console.log("AddProject:1", req.headers.authorization);
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: "Missing token" });
-    
+
     const token = authHeader.split(" ")[1];
     if (!token) return res.status(401).json({ error: "Missing token" });
     console.log("AddProject:2");

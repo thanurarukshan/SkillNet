@@ -8,7 +8,6 @@ import {
   CardContent,
   Button,
   Typography,
-  Grid,
   List,
   ListItem,
   ListItemText,
@@ -18,68 +17,81 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Divider,
-  CircularProgress,
+  Box,
+  Stack,
+  AppBar,
+  Toolbar,
+  Avatar,
 } from "@mui/material";
+import { Add } from "@mui/icons-material";
+import UserMenu from "../../components/UserMenu";
+import { useRouter } from "next/navigation";
 
 export default function CompanyDashboard() {
-  const title = "Company Dashboard";
-  const panelName = "Jobs";
+  const router = useRouter();
+  const [tabIndex, setTabIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [openCreate, setOpenCreate] = useState(false);
+
+  const [companyInfo, setCompanyInfo] = useState({
+    id: 0,
+    name: "",
+    username: "",
+    role: "",
+    company_registration_no: "",
+    company_type: "",
+    industry: "",
+  });
+
+  interface Job {
+    name?: string;
+    skills?: string;
+    expLevel?: string;
+    [key: string]: string | undefined;
+  }
+
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [newJob, setNewJob] = useState<Job>({});
+
   const formFields = [
     { name: "name", label: "Job Name", type: "text" },
     { name: "skills", label: "Required Skills", type: "text" },
     { name: "expLevel", label: "Experience Level", type: "text" },
   ];
 
-  // --- States ---
-  const [tabIndex, setTabIndex] = useState(0);
-  const [companyInfo, setCompanyInfo] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [openEditProfile, setOpenEditProfile] = useState(false);
-  const [profileEdit, setProfileEdit] = useState<any>({});
-  const [items, setItems] = useState<any[]>([]);
-  const [openCreate, setOpenCreate] = useState(false);
-  const [openDetails, setOpenDetails] = useState<null | number>(null);
-  const [newItem, setNewItem] = useState<Record<string, string>>({});
-  const [editMode, setEditMode] = useState(false);
+  useEffect(() => {
+    fetchCompanyInfo();
+  }, []);
 
-  // --- Fetch Company Info ---
   const fetchCompanyInfo = async () => {
     const token = localStorage.getItem("token");
-    if (!token) return alert("No token found. Please log in again.");
+    if (!token) {
+      router.push("/");
+      return;
+    }
 
     try {
-      const res = await fetch("http://localhost:5000/api/getStudentInfo", {
-        method: "GET",
+      const res = await fetch("http://localhost:5000/api/getCompanyInfo", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await res.json();
       if (res.ok) {
         setCompanyInfo(data.user);
-        setProfileEdit(data.user);
       } else {
-        console.error("Error fetching profile:", data.error);
-        alert(data.error || "Failed to fetch company profile");
+        console.error("Error fetching company info:", data.error);
       }
     } catch (err) {
-      console.error("Error fetching company profile:", err);
+      console.error("Error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCompanyInfo();
-  }, []);
-
-  // --- Handle Profile Edit ---
-  const handleProfileChange = (field: string, value: string) =>
-    setProfileEdit({ ...profileEdit, [field]: value });
-
-  const handleProfileSubmit = async () => {
+  const handleUpdateProfile = async () => {
     const token = localStorage.getItem("token");
-    if (!token) return alert("No token found.");
+    if (!token) return;
 
     try {
       const res = await fetch("http://localhost:5000/api/editProfile", {
@@ -88,270 +100,197 @@ export default function CompanyDashboard() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(profileEdit),
+        body: JSON.stringify({
+          name: companyInfo.name,
+          company_registration_no: companyInfo.company_registration_no,
+          company_type: companyInfo.company_type,
+          industry: companyInfo.industry,
+        }),
       });
 
       const data = await res.json();
       if (res.ok) {
-        alert("Company profile updated successfully!");
-        setCompanyInfo(profileEdit);
-        setOpenEditProfile(false);
+        alert("Profile updated successfully!");
+        setOpenEdit(false);
+        fetchCompanyInfo();
       } else {
-        alert(data.error || "Failed to update company profile");
+        alert(data.error || "Failed to update profile");
       }
     } catch (err) {
-      console.error("Error updating company profile:", err);
+      console.error("Error updating profile:", err);
+      alert("Error updating profile");
     }
   };
 
-  // --- Job Handling ---
-  const handleChange = (field: string, value: string) =>
-    setNewItem({ ...newItem, [field]: value });
-
-  const handleSubmit = async () => {
-    if (!newItem[formFields[0].name]) return;
-    const token = localStorage.getItem("token");
-    if (!token) return alert("No token found.");
-
-    try {
-      const res = await fetch("http://localhost:5000/api/addJob", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(newItem),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        console.log("Job added:", data.message);
-        setItems([...items, newItem]);
-        setNewItem({});
-        setOpenCreate(false);
-      } else {
-        alert(data.error || "Failed to add job");
-      }
-    } catch (err) {
-      console.error("Error sending to API Gateway:", err);
-    }
+  const handleSubmit = () => {
+    setJobs([...jobs, newJob]);
+    setNewJob({});
+    setOpenCreate(false);
   };
 
-  const handleUpdate = () => {
-    if (openDetails === null) return;
-    const updated = [...items];
-    updated[openDetails] = newItem;
-    setItems(updated);
-    setEditMode(false);
-  };
-
-  // Mock students (applicants)
-  const students = [
-    { name: "Alice", skills: "React, Node.js" },
-    { name: "Bob", skills: "Python, ML" },
-    { name: "Charlie", skills: "UI/UX, Figma" },
-  ];
-
-  if (loading)
+  if (loading) {
     return (
       <main className="flex justify-center items-center min-h-screen">
-        <CircularProgress />
+        <Typography variant="h5">Loading...</Typography>
       </main>
     );
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-4xl font-bold mb-6 text-center">{title}</h1>
+    <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
+      {/* HEADER BAR */}
+      <AppBar position="static" sx={{ background: "linear-gradient(135deg,#6366f1,#06b6d4)" }}>
+        <Toolbar>
+          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
+            SkillNet - Company Dashboard
+          </Typography>
+          <UserMenu
+            userName={companyInfo.name}
+            onProfileUpdate={() => setOpenEdit(true)}
+          />
+        </Toolbar>
+      </AppBar>
 
-      {/* --- Company Info Card --- */}
-      {companyInfo && (
-        <Card className="mb-6 max-w-3xl mx-auto">
+      <Box p={4}>
+        {/* PROFILE CARD */}
+        <Card sx={{ maxWidth: 900, mx: "auto", mb: 4, p: 3 }}>
           <CardContent>
-            {Object.entries(companyInfo).map(([key, value]) => (
-              <Typography key={key} variant="body2" sx={{ mb: 1 }}>
-                <strong>{key}:</strong> {String(value)}
-              </Typography>
-            ))}
-            <div className="flex justify-end mt-4">
+            <Stack direction="row" spacing={3} alignItems="center">
+              <Avatar sx={{ width: 80, height: 80, bgcolor: "#6366f1" }}>
+                {companyInfo.name.charAt(0).toUpperCase()}
+              </Avatar>
+              <Box>
+                <Typography variant="h5" fontWeight="bold">
+                  {companyInfo.name}
+                </Typography>
+                <Typography color="text.secondary">{companyInfo.username}</Typography>
+                <Typography variant="body2" mt={1}>
+                  <strong>Registration No:</strong> {companyInfo.company_registration_no || "N/A"} |{" "}
+                  <strong>Type:</strong> {companyInfo.company_type || "N/A"}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Industry:</strong> {companyInfo.industry || "N/A"}
+                </Typography>
+              </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+
+        {/* TABS */}
+        <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)} centered sx={{ mb: 3 }}>
+          <Tab label="Jobs" />
+          <Tab label="Settings" />
+        </Tabs>
+
+        {/* JOBS */}
+        {tabIndex === 0 && (
+          <Card sx={{ maxWidth: 900, mx: "auto", p: 3 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6">Job Listings</Typography>
               <Button
                 variant="contained"
-                color="primary"
-                onClick={() => setOpenEditProfile(true)}
+                color="success"
+                startIcon={<Add />}
+                onClick={() => setOpenCreate(true)}
               >
-                Edit Profile
+                Post Job
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </Stack>
 
-      {/* Tabs */}
-      <Tabs
-        value={tabIndex}
-        onChange={(_, newValue) => setTabIndex(newValue)}
-        centered
-        className="mb-6"
-      >
-        <Tab label={panelName} />
-        <Tab label="Settings" />
-      </Tabs>
-
-      {/* Jobs Panel */}
-      {tabIndex === 0 && (
-        <Grid container justifyContent="center">
-          <Card className="w-full max-w-3xl p-4">
-            <CardContent>
-              <div className="flex justify-between items-center mb-4">
-                <Typography variant="h6">{panelName}</Typography>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={() => setOpenCreate(true)}
-                >
-                  Create
-                </Button>
-              </div>
-
-              <List>
-                {items.map((item, index) => (
-                  <ListItem key={index} divider disablePadding>
-                    <ListItemButton
-                      onClick={() => {
-                        setNewItem(item);
-                        setOpenDetails(index);
-                        setEditMode(false);
-                      }}
-                    >
-                      <ListItemText
-                        primary={item[formFields[0].name]}
-                        secondary={formFields
-                          .slice(1)
-                          .map((f) => `${f.label}: ${item[f.name]}`)
-                          .join(" | ")}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
+            <List>
+              {jobs.map((job, index) => (
+                <ListItem key={index} divider disablePadding>
+                  <ListItemButton>
+                    <ListItemText
+                      primary={job.name}
+                      secondary={`Skills: ${job.skills} | Level: ${job.expLevel}`}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
           </Card>
-        </Grid>
-      )}
+        )}
 
-      {/* Settings Tab */}
-      {tabIndex === 1 && (
-        <Card className="max-w-3xl mx-auto p-6">
-          <CardContent>
+        {/* SETTINGS */}
+        {tabIndex === 1 && (
+          <Card sx={{ maxWidth: 900, mx: "auto", p: 3 }}>
             <Typography variant="h6">Settings</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Settings panel coming soon...
-            </Typography>
-          </CardContent>
-        </Card>
-      )}
+            <Typography color="text.secondary">Settings panel coming soon...</Typography>
+          </Card>
+        )}
+      </Box>
 
-      {/* --- Edit Profile Dialog --- */}
-      <Dialog open={openEditProfile} onClose={() => setOpenEditProfile(false)}>
-        <DialogTitle>Edit Profile</DialogTitle>
+      {/* EDIT PROFILE */}
+      <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Edit Company Profile</DialogTitle>
         <DialogContent>
-          {["name", "industry", "username"].map((field) => (
+          <Stack spacing={2} mt={1}>
             <TextField
-              key={field}
-              margin="dense"
-              label={field.charAt(0).toUpperCase() + field.slice(1)}
+              label="Company Name"
               fullWidth
-              value={profileEdit[field] || ""}
-              onChange={(e) => handleProfileChange(field, e.target.value)}
+              value={companyInfo.name}
+              onChange={(e) => setCompanyInfo({ ...companyInfo, name: e.target.value })}
             />
-          ))}
+            <TextField
+              label="Registration Number"
+              fullWidth
+              value={companyInfo.company_registration_no}
+              onChange={(e) => setCompanyInfo({ ...companyInfo, company_registration_no: e.target.value })}
+            />
+            <TextField
+              select
+              label="Company Type"
+              fullWidth
+              value={companyInfo.company_type}
+              onChange={(e) => setCompanyInfo({ ...companyInfo, company_type: e.target.value })}
+              SelectProps={{ native: true }}
+            >
+              <option value="">Select Company Type</option>
+              <option value="Pvt.Ltd">Private Limited (Pvt. Ltd.)</option>
+              <option value="LLP">Limited Liability Partnership (LLP)</option>
+              <option value="Sole Proprietorship">Sole Proprietorship</option>
+              <option value="Partnership">Partnership</option>
+            </TextField>
+            <TextField
+              label="Industry"
+              fullWidth
+              value={companyInfo.industry}
+              onChange={(e) => setCompanyInfo({ ...companyInfo, industry: e.target.value })}
+            />
+          </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenEditProfile(false)}>Cancel</Button>
-          <Button onClick={handleProfileSubmit} variant="contained">
+          <Button onClick={() => setOpenEdit(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleUpdateProfile}>
             Save
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* --- Create Job Dialog --- */}
+      {/* CREATE JOB */}
       <Dialog open={openCreate} onClose={() => setOpenCreate(false)}>
-        <DialogTitle>Create New {panelName.slice(0, -1)}</DialogTitle>
+        <DialogTitle>Post New Job</DialogTitle>
         <DialogContent>
           {formFields.map((field) => (
             <TextField
               key={field.name}
               margin="dense"
               label={field.label}
-              type={field.type || "text"}
+              type={field.type}
               fullWidth
-              value={newItem[field.name] || ""}
-              onChange={(e) => handleChange(field.name, e.target.value)}
+              value={newJob[field.name] || ""}
+              onChange={(e) => setNewJob({ ...newJob, [field.name]: e.target.value })}
             />
           ))}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenCreate(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            Submit
+          <Button variant="contained" onClick={handleSubmit}>
+            Post Job
           </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* --- Job Details Dialog --- */}
-      <Dialog
-        open={openDetails !== null}
-        onClose={() => setOpenDetails(null)}
-        fullWidth
-        maxWidth="md"
-      >
-        <DialogTitle>
-          <div className="flex justify-between items-center">
-            <Typography variant="h6">Details</Typography>
-            {!editMode && (
-              <Button variant="outlined" onClick={() => setEditMode(true)}>
-                Edit {panelName.slice(0, -1)}
-              </Button>
-            )}
-          </div>
-        </DialogTitle>
-        <DialogContent>
-          {formFields.map((field) => (
-            <TextField
-              key={field.name}
-              margin="dense"
-              label={field.label}
-              type={field.type || "text"}
-              fullWidth
-              value={newItem[field.name] || ""}
-              onChange={(e) => handleChange(field.name, e.target.value)}
-              InputProps={{ readOnly: !editMode }}
-            />
-          ))}
-          <Divider className="my-4" />
-          <Typography variant="h6" className="mb-2">
-            Potential Applicants
-          </Typography>
-          <List>
-            {students.map((s, idx) => (
-              <ListItem key={idx} divider>
-                <ListItemText
-                  primary={s.name}
-                  secondary={`Skills: ${s.skills}`}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDetails(null)}>Close</Button>
-          {editMode && (
-            <Button onClick={handleUpdate} variant="contained">
-              Save
-            </Button>
-          )}
         </DialogActions>
       </Dialog>
     </main>
   );
 }
-
-
