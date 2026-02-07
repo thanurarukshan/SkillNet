@@ -13,19 +13,24 @@ const PORT = 5000;
 // Backend server URL
 const BACKEND_BASE_URL = "http://localhost:5001";
 
-// ✅ Allow requests from frontend
+// ✅ Allow requests from frontend (support both ports 3000 and 3001)
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: ["http://localhost:3000", "http://localhost:3001"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
 }));
 
 app.use(express.json());
 
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "http://localhost:3000");
+  const origin = req.headers.origin;
+  if (origin === "http://localhost:3000" || origin === "http://localhost:3001") {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
   if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
@@ -173,16 +178,45 @@ app.get("/api/getSmeInfo", verifyToken, async (req, res) => {
   try {
     const token = req.headers.authorization;
     console.log("x:", token);
-    // const response = await fetch(`${BACKEND_BASE_URL}/api/getSmeInfo`, {
-    //   headers: { Authorization: token!, "Content-Type": "application/json" },
-    // });
-    // const data = await response.json();
-    // res.status(response.status).json(data);
+    const response = await fetch(`${BACKEND_BASE_URL}/api/getSmeInfo`, {
+      headers: { Authorization: token!, "Content-Type": "application/json" },
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
   } catch (err) {
     console.error("Gateway getSmeInfo error:", err);
-    res.status(500).json({ error: "Failed to fetch Sme info" });
+    res.status(500).json({ error: "Failed to fetch SME info" });
   }
 });
+
+// Change Password
+app.put("/api/changePassword", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const payload = req.body;
+    const response = await axios.put(`${BACKEND_BASE_URL}/api/changePassword`, payload, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway changePassword error:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to change password" });
+  }
+});
+
+// Delete User
+app.delete("/api/deleteUser", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.delete(`${BACKEND_BASE_URL}/api/deleteUser`, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway deleteUser error:", err.response?.data || err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to delete user" });
+  }
+});
+
+//-----------------------Project/Job Management--------------------------------
 
 // ✅ API GATEWAY FIX
 app.post("/api/addProject", verifyToken, async (req: Request, res: Response) => {

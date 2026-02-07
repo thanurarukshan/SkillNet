@@ -62,10 +62,10 @@ export default function AdminDashboard() {
 
   // Dialog states
   const [openEdit, setOpenEdit] = useState(false);
-  const [editItem, setEditItem] = useState<any>(null);
+  const [editItem, setEditItem] = useState<User | Team | Project | null>(null);
   const [editType, setEditType] = useState<"user" | "team" | "project">();
 
-  const handleEdit = (item: any, type: "user" | "team" | "project") => {
+  const handleEdit = (item: User | Team | Project, type: "user" | "team" | "project") => {
     setEditItem(item);
     setEditType(type);
     setOpenEdit(true);
@@ -78,12 +78,14 @@ export default function AdminDashboard() {
   };
 
   const handleSave = () => {
+    if (!editItem) return;
+
     if (editType === "user") {
-      setUsers(users.map(u => u.id === editItem.id ? editItem : u));
+      setUsers(users.map(u => u.id === editItem.id ? (editItem as User) : u));
     } else if (editType === "team") {
-      setTeams(teams.map(t => t.id === editItem.id ? editItem : t));
+      setTeams(teams.map(t => t.id === editItem.id ? (editItem as Team) : t));
     } else if (editType === "project") {
-      setProjects(projects.map(p => p.id === editItem.id ? editItem : p));
+      setProjects(projects.map(p => p.id === editItem.id ? (editItem as Project) : p));
     }
     setOpenEdit(false);
     setEditItem(null);
@@ -167,14 +169,14 @@ export default function AdminDashboard() {
               <TextField
                 label="Name"
                 fullWidth
-                value={editItem.name}
-                onChange={(e) => setEditItem({ ...editItem, name: e.target.value })}
+                value={(editItem as User).name}
+                onChange={(e) => setEditItem({ ...editItem, name: e.target.value } as User)}
               />
               <TextField
                 label="Email"
                 fullWidth
-                value={editItem.email}
-                onChange={(e) => setEditItem({ ...editItem, email: e.target.value })}
+                value={(editItem as User).email}
+                onChange={(e) => setEditItem({ ...editItem, email: e.target.value } as User)}
               />
             </>
           )}
@@ -182,16 +184,16 @@ export default function AdminDashboard() {
             <TextField
               label="Team Name"
               fullWidth
-              value={editItem.name}
-              onChange={(e) => setEditItem({ ...editItem, name: e.target.value })}
+              value={(editItem as Team).name}
+              onChange={(e) => setEditItem({ ...editItem, name: e.target.value } as Team)}
             />
           )}
           {editItem && editType === "project" && (
             <TextField
               label="Project Name"
               fullWidth
-              value={editItem.name}
-              onChange={(e) => setEditItem({ ...editItem, name: e.target.value })}
+              value={(editItem as Project).name}
+              onChange={(e) => setEditItem({ ...editItem, name: e.target.value } as Project)}
             />
           )}
         </DialogContent>
