@@ -33,14 +33,31 @@ def fetch_teams_from_db():
             r["t_skills_req"] = r["t_skills_req"].replace('"', '').replace('[','').replace(']','')
     return pd.DataFrame(rows)
 
-def recommend_teams(student_skills, teams_df, top_n=3):
-    """Compute similarity and return top N recommended teams"""
+def recommend_teams(student_skills, teams_df, top_n=3, min_similarity=0.1):
+    """Compute similarity and return top N recommended teams above threshold"""
+    if teams_df.empty:
+        return [], 0, 0
+    
     team_vectors = vectorizer.transform(teams_df["t_skills_req"])
     student_vector = vectorizer.transform([student_skills])
     similarities = cosine_similarity(student_vector, team_vectors).flatten()
-    top_indices = similarities.argsort()[::-1][:top_n]
-    recommended = teams_df.iloc[top_indices]
-    return recommended[["t_name", "t_skills_req"]].to_dict(orient="records")
+    
+    # Filter by minimum similarity threshold
+    valid_indices = [i for i, score in enumerate(similarities) if score >= min_similarity]
+    
+    if not valid_indices:
+        return [], len(teams_df), 0
+    
+    # Sort by similarity score (descending) and get top N
+    valid_pairs = [(i, similarities[i]) for i in valid_indices]
+    valid_pairs.sort(key=lambda x: x[1], reverse=True)
+    top_indices = [idx for idx, _ in valid_pairs[:top_n]]
+    
+    recommended = teams_df.iloc[top_indices].copy()
+    recommended['similarity_score'] = [similarities[i] for i in top_indices]
+    
+    result = recommended[["t_id", "t_name", "t_skills_req", "similarity_score"]].to_dict(orient="records")
+    return result, len(teams_df), len(valid_indices)
 
 @app.route("/ml/recommend", methods=["POST"])
 def ml_recommend():
@@ -50,14 +67,30 @@ def ml_recommend():
 
     student_skills = data["skills"]
     top_n = data.get("top_n", 3)
+    min_similarity = data.get("min_similarity", 0.1)  # Default 10% similarity threshold
 
     # Fetch teams dynamically from MySQL
     teams_df = fetch_teams_from_db()
-    recommendations = recommend_teams(student_skills, teams_df, top_n)
+    
+    if teams_df.empty:
+        return jsonify({
+            "student_skills": student_skills,
+            "recommendations": [],
+            "total_teams_evaluated": 0,
+            "teams_above_threshold": 0,
+            "message": "No teams found in database"
+        })
+    
+    recommendations, total_teams, teams_above_threshold = recommend_teams(
+        student_skills, teams_df, top_n, min_similarity
+    )
 
     return jsonify({
         "student_skills": student_skills,
-        "recommendations": recommendations
+        "recommendations": recommendations,
+        "total_teams_evaluated": total_teams,
+        "teams_above_threshold": teams_above_threshold,
+        "message": "No matching teams found" if not recommendations else None
     })
 
 if __name__ == "__main__":

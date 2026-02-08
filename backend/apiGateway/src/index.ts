@@ -234,6 +234,238 @@ app.post("/api/addProject", verifyToken, async (req: Request, res: Response) => 
   }
 });
 
+// =====================================================
+// SKILL MANAGEMENT ROUTES
+// =====================================================
+
+app.get("/api/getStudentSkills", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/getStudentSkills`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway getStudentSkills error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to fetch skills" });
+  }
+});
+
+app.post("/api/addSkill", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/addSkill`, req.body, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway addSkill error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to add skill" });
+  }
+});
+
+app.put("/api/verifySkill", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.put(`${BACKEND_BASE_URL}/api/verifySkill`, req.body, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway verifySkill error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to verify skill" });
+  }
+});
+
+app.delete("/api/removeSkill", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.delete(`${BACKEND_BASE_URL}/api/removeSkill`, {
+      headers: { Authorization: req.headers.authorization! },
+      data: req.body
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway removeSkill error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to remove skill" });
+  }
+});
+
+// =====================================================
+// TEAM MANAGEMENT ROUTES
+// =====================================================
+
+app.post("/api/createTeam", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/createTeam`, req.body, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway createTeam error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to create team" });
+  }
+});
+
+app.get("/api/getMyTeams", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/getMyTeams`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway getMyTeams error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to fetch teams" });
+  }
+});
+
+app.get("/api/getTeamDetails/:teamId", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/getTeamDetails/${req.params.teamId}`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway getTeamDetails error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to fetch team details" });
+  }
+});
+
+app.put("/api/updateTeam/:teamId", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.put(`${BACKEND_BASE_URL}/api/updateTeam/${req.params.teamId}`, req.body, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway updateTeam error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to update team" });
+  }
+});
+
+app.delete("/api/deleteTeam/:teamId", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.delete(`${BACKEND_BASE_URL}/api/deleteTeam/${req.params.teamId}`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway deleteTeam error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to delete team" });
+  }
+});
+
+app.put("/api/removeMember/:teamId/:studentId", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.put(
+      `${BACKEND_BASE_URL}/api/removeMember/${req.params.teamId}/${req.params.studentId}`,
+      {},
+      { headers: { Authorization: req.headers.authorization! } }
+    );
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway removeMember error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to remove member" });
+  }
+});
+
+app.post("/api/leaveTeam/:teamId", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(
+      `${BACKEND_BASE_URL}/api/leaveTeam/${req.params.teamId}`,
+      {},
+      { headers: { Authorization: req.headers.authorization! } }
+    );
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway leaveTeam error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to leave team" });
+  }
+});
+
+// =====================================================
+// TEAM DISCOVERY ROUTES
+// =====================================================
+
+app.get("/api/searchTeams", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/searchTeams`, {
+      headers: { Authorization: req.headers.authorization! },
+      params: req.query
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway searchTeams error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to search teams" });
+  }
+});
+
+app.post("/api/requestJoinTeam/:teamId", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(
+      `${BACKEND_BASE_URL}/api/requestJoinTeam/${req.params.teamId}`,
+      {},
+      { headers: { Authorization: req.headers.authorization! } }
+    );
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway requestJoinTeam error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to send join request" });
+  }
+});
+
+app.get("/api/getTeamRequests/:teamId", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/getTeamRequests/${req.params.teamId}`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway getTeamRequests error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to fetch requests" });
+  }
+});
+
+app.put("/api/approveRequest/:requestId", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.put(
+      `${BACKEND_BASE_URL}/api/approveRequest/${req.params.requestId}`,
+      {},
+      { headers: { Authorization: req.headers.authorization! } }
+    );
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway approveRequest error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to approve request" });
+  }
+});
+
+app.put("/api/rejectRequest/:requestId", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.put(
+      `${BACKEND_BASE_URL}/api/rejectRequest/${req.params.requestId}`,
+      {},
+      { headers: { Authorization: req.headers.authorization! } }
+    );
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway rejectRequest error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to reject request" });
+  }
+});
+
+// =====================================================
+// ML RECOMMENDATION ROUTE
+// =====================================================
+
+app.get("/api/getTeamRecommendations", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/getTeamRecommendations`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway getTeamRecommendations error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to fetch recommendations" });
+  }
+});
+
 //-----------------------Start Server--------------------------------
 app.listen(PORT, () => {
   console.log(`🚪 API Gateway running on http://localhost:${PORT}`);

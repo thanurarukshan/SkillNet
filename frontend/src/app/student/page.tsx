@@ -20,7 +20,7 @@ import {
   AppBar,
   Toolbar,
 } from "@mui/material";
-import { Add } from "@mui/icons-material";
+import { Add, Groups } from "@mui/icons-material";
 import UserMenu from "../../components/UserMenu";
 import { useRouter } from "next/navigation";
 
@@ -30,6 +30,8 @@ export default function StudentDashboard() {
   const [openEdit, setOpenEdit] = useState(false);
   const [newSkill, setNewSkill] = useState("");
   const [loading, setLoading] = useState(true);
+  const [verifiedSkills, setVerifiedSkills] = useState<string[]>([]);
+  const [unverifiedSkills, setUnverifiedSkills] = useState<string[]>([]);
 
   const [studentInfo, setStudentInfo] = useState({
     id: 0,
@@ -39,11 +41,6 @@ export default function StudentDashboard() {
     department: "",
     academic_year: "",
   });
-
-  const [skills, setSkills] = useState([
-    { name: "React" },
-    { name: "Node.js" },
-  ]);
 
   const [teams] = useState([
     { id: 1, name: "Team Alpha", members: ["Alice", "Bob"] },
@@ -57,6 +54,7 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     fetchStudentInfo();
+    fetchStudentSkills();
   }, []);
 
   const fetchStudentInfo = async () => {
@@ -116,10 +114,108 @@ export default function StudentDashboard() {
     }
   };
 
-  const handleAddSkill = () => {
-    if (newSkill.trim()) {
-      setSkills([...skills, { name: newSkill }]);
-      setNewSkill("");
+  const fetchStudentSkills = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch("http://localhost:5000/api/getStudentSkills", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setVerifiedSkills(data.verified_skills || []);
+        setUnverifiedSkills(data.unverified_skills || []);
+      }
+    } catch (err) {
+      console.error("Error fetching skills:", err);
+    }
+  };
+
+  const handleAddSkill = async () => {
+    if (!newSkill.trim()) {
+      alert("Please enter a skill name");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch("http://localhost:5000/api/addSkill", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ skill: newSkill.trim() }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setNewSkill("");
+        fetchStudentSkills(); // Refresh skills list
+      } else {
+        alert(data.error || "Failed to add skill");
+      }
+    } catch (err) {
+      console.error("Error adding skill:", err);
+      alert("Error adding skill");
+    }
+  };
+
+  const handleVerifySkill = async (skill: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch("http://localhost:5000/api/verifySkill", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ skill }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        fetchStudentSkills(); // Refresh skills list
+      } else {
+        alert(data.error || "Failed to verify skill");
+      }
+    } catch (err) {
+      console.error("Error verifying skill:", err);
+      alert("Error verifying skill");
+    }
+  };
+
+  const handleRemoveSkill = async (skill: string, type: "verified" | "unverified") => {
+    if (!confirm(`Are you sure you want to remove "${skill}"?`)) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch("http://localhost:5000/api/removeSkill", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ skill, type }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        fetchStudentSkills(); // Refresh skills list
+      } else {
+        alert(data.error || "Failed to remove skill");
+      }
+    } catch (err) {
+      console.error("Error removing skill:", err);
+      alert("Error removing skill");
     }
   };
 
@@ -139,6 +235,13 @@ export default function StudentDashboard() {
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
             SkillNet - Student Dashboard
           </Typography>
+          <Button
+            color="inherit"
+            onClick={() => router.push("/student")}
+            sx={{ mr: 2, fontWeight: "bold" }}
+          >
+            Dashboard
+          </Button>
           <UserMenu
             userName={studentInfo.name}
             onProfileUpdate={() => setOpenEdit(true)}
@@ -175,44 +278,155 @@ export default function StudentDashboard() {
           <Tab label="Jobs" />
         </Tabs>
 
-        {/* SKILLS */}
+        {/* SKILLS TAB - Complete Implementation */}
         {tabIndex === 0 && (
-          <Box textAlign="center">
-            <Stack direction="row" justifyContent="center" gap={2} flexWrap="wrap" mb={3}>
-              {skills.map((s, idx) => (
-                <Chip key={idx} label={s.name} color="primary" />
-              ))}
-            </Stack>
+          <Box>
+            {/* Add Skill Section */}
+            <Card sx={{ maxWidth: 900, mx: "auto", mb: 3, p: 3 }}>
+              <Typography variant="h6" mb={2}>
+                Add New Skill
+              </Typography>
+              <Stack direction="row" gap={2}>
+                <TextField
+                  label="Skill Name"
+                  value={newSkill}
+                  onChange={(e) => setNewSkill(e.target.value)}
+                  size="small"
+                  fullWidth
+                  placeholder="e.g., React, Python, Machine Learning"
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") handleAddSkill();
+                  }}
+                />
+                <Button variant="contained" startIcon={<Add />} onClick={handleAddSkill}>
+                  Add
+                </Button>
+              </Stack>
+            </Card>
 
-            <Stack direction="row" justifyContent="center" gap={2}>
-              <TextField
-                label="New Skill"
-                value={newSkill}
-                onChange={(e) => setNewSkill(e.target.value)}
-                size="small"
-              />
-              <Button variant="contained" startIcon={<Add />} onClick={handleAddSkill}>
-                Add
-              </Button>
-            </Stack>
+            {/* Verified Skills */}
+            <Card sx={{ maxWidth: 900, mx: "auto", mb: 3, p: 3 }}>
+              <Typography variant="h6" mb={2} sx={{ display: "flex", alignItems: "center" }}>
+                ✓ Verified Skills
+                <Chip label={verifiedSkills.length} size="small" sx={{ ml: 2 }} color="success" />
+              </Typography>
+              {verifiedSkills.length > 0 ? (
+                <Stack direction="row" gap={1.5} flexWrap="wrap">
+                  {verifiedSkills.map((skill, idx) => (
+                    <Chip
+                      key={idx}
+                      label={skill}
+                      color="success"
+                      onDelete={() => handleRemoveSkill(skill, "verified")}
+                      sx={{ fontSize: "0.95rem", height: "32px" }}
+                    />
+                  ))}
+                </Stack>
+              ) : (
+                <Typography color="text.secondary" variant="body2">
+                  No verified skills yet. Verify skills from the unverified list below.
+                </Typography>
+              )}
+            </Card>
+
+            {/* Unverified Skills */}
+            <Card sx={{ maxWidth: 900, mx: "auto", mb: 3, p: 3 }}>
+              <Typography variant="h6" mb={2} sx={{ display: "flex", alignItems: "center" }}>
+                ⏳ Unverified Skills
+                <Chip label={unverifiedSkills.length} size="small" sx={{ ml: 2 }} color="warning" />
+              </Typography>
+              {unverifiedSkills.length > 0 ? (
+                <Stack direction="row" gap={1.5} flexWrap="wrap">
+                  {unverifiedSkills.map((skill, idx) => (
+                    <Box
+                      key={idx}
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        border: "1px solid",
+                        borderColor: "warning.main",
+                        borderRadius: "16px",
+                        px: 1.5,
+                        py: 0.5,
+                        gap: 1,
+                        backgroundColor: "#fff8e1"
+                      }}
+                    >
+                      <Typography sx={{ fontSize: "0.875rem", color: "text.primary" }}>
+                        {skill}
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        onClick={() => handleVerifySkill(skill)}
+                        sx={{
+                          minWidth: "auto",
+                          px: 1,
+                          py: 0.25,
+                          fontSize: "0.7rem",
+                          height: "24px",
+                          textTransform: "none"
+                        }}
+                      >
+                        ✓
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="text"
+                        color="error"
+                        onClick={() => handleRemoveSkill(skill, "unverified")}
+                        sx={{
+                          minWidth: "auto",
+                          px: 0.5,
+                          py: 0.25,
+                          fontSize: "0.75rem",
+                          height: "24px"
+                        }}
+                      >
+                        ✕
+                      </Button>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <Typography color="text.secondary" variant="body2">
+                  No unverified skills. Add new skills above.
+                </Typography>
+              )}
+            </Card>
+
+            {/* Skills Info */}
+            <Card sx={{ maxWidth: 900, mx: "auto", p: 2, bgcolor: "#f0f9ff" }}>
+              <Typography variant="body2" color="text.secondary">
+                💡 <strong>Tip:</strong> Verify your skills to improve team recommendations and increase your visibility to employers.
+              </Typography>
+            </Card>
           </Box>
         )}
 
-        {/* TEAMS */}
+        {/* TEAMS TAB - Navigate to Teams Page */}
         {tabIndex === 1 && (
-          <Stack direction="row" justifyContent="center" flexWrap="wrap" gap={3}>
-            {teams.map((t) => (
-              <Card key={t.id} sx={{ width: 260, p: 2 }}>
-                <Typography variant="h6">{t.name}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t.members.join(", ")}
-                </Typography>
-                <Button fullWidth variant="contained" sx={{ mt: 2 }}>
-                  Join
-                </Button>
-              </Card>
-            ))}
-          </Stack>
+          <Box textAlign="center">
+            <Card sx={{ maxWidth: 600, mx: "auto", p: 6 }}>
+              <Groups sx={{ fontSize: 100, color: "#6366f1", mb: 3 }} />
+              <Typography variant="h5" fontWeight="bold" mb={2}>
+                Team Management
+              </Typography>
+              <Typography color="text.secondary" mb={4}>
+                Find teams, create your own, manage members, and get AI-powered recommendations based on your skills.
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<Groups />}
+                onClick={() => router.push("/student/teams")}
+                fullWidth
+              >
+                Go to Teams
+              </Button>
+            </Card>
+          </Box>
         )}
 
         {/* JOBS */}
