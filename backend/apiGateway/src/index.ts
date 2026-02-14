@@ -466,6 +466,197 @@ app.get("/api/getTeamRecommendations", verifyToken, async (req: Request, res: Re
   }
 });
 
+// =====================================================
+// SME PROFILE MANAGEMENT ROUTES
+// =====================================================
+
+app.get("/api/sme/profile", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/sme/profile`, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway GET sme/profile error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to get SME profile" });
+  }
+});
+
+app.put("/api/sme/profile", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.put(`${BACKEND_BASE_URL}/api/sme/profile`, req.body, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway PUT sme/profile error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to update SME profile" });
+  }
+});
+
+app.delete("/api/sme/profile", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.delete(`${BACKEND_BASE_URL}/api/sme/profile`, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway DELETE sme/profile error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to delete SME profile" });
+  }
+});
+
+// =====================================================
+// SME PROJECT MANAGEMENT ROUTES
+// =====================================================
+
+// Create Project
+app.post("/api/projects", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/projects`, req.body, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway createProject error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to create project" });
+  }
+});
+
+// Get All Projects
+app.get("/api/projects", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/projects`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway getProjects error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to fetch projects" });
+  }
+});
+
+// Get Single Project
+app.get("/api/projects/:id", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/projects/${req.params.id}`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway getProject error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to fetch project" });
+  }
+});
+
+// Update Project
+app.put("/api/projects/:id", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.put(`${BACKEND_BASE_URL}/api/projects/${req.params.id}`, req.body, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway updateProject error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to update project" });
+  }
+});
+
+// Delete Project
+app.delete("/api/projects/:id", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.delete(`${BACKEND_BASE_URL}/api/projects/${req.params.id}`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway deleteProject error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to delete project" });
+  }
+});
+
+// Get Project Recommendations
+app.get("/api/projects/:id/recommendations", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/projects/${req.params.id}/recommendations`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway getRecommendations error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to fetch recommendations" });
+  }
+});
+
+// Send Hiring Request
+app.post("/api/projects/:id/send-request", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/projects/${req.params.id}/send-request`, req.body, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway sendHiringRequest error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to send request" });
+  }
+});
+
+// =====================================================
+// HIRING REQUEST ROUTES
+// =====================================================
+
+// Get hiring requests for a project (SME view)
+app.get("/api/hiring-requests/project/:id", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/hiring-requests/project/${req.params.id}`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway getProjectRequests error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to fetch requests" });
+  }
+});
+
+// Get hiring requests for team leader
+app.get("/api/teams/hiring-requests", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/teams/hiring-requests`, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway getTeamRequests error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to fetch team requests" });
+  }
+});
+
+// Accept hiring request (Team leader)
+app.post("/api/teams/hiring-requests/:id/accept", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/teams/hiring-requests/${req.params.id}/accept`, {}, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway acceptRequest error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to accept request" });
+  }
+});
+
+// Reject hiring request (Team leader)
+app.post("/api/teams/hiring-requests/:id/reject", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/teams/hiring-requests/${req.params.id}/reject`, {}, {
+      headers: { Authorization: req.headers.authorization! }
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway rejectRequest error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to reject request" });
+  }
+});
+
 //-----------------------Start Server--------------------------------
 app.listen(PORT, () => {
   console.log(`🚪 API Gateway running on http://localhost:${PORT}`);

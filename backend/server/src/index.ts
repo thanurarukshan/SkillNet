@@ -1328,7 +1328,7 @@ app.get("/api/sme/profile", async (req: Request, res: Response) => {
     const token = authHeader.split(" ")[1];
     const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
 
-    if (decoded.role !== "sme") {
+    if (decoded.role?.toLowerCase() !== "sme") {
       return res.status(403).json({ error: "Access denied" });
     }
 
@@ -1356,7 +1356,7 @@ app.put("/api/sme/profile", async (req: Request, res: Response) => {
     const token = authHeader.split(" ")[1];
     const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
 
-    if (decoded.role !== "sme") {
+    if (decoded.role?.toLowerCase() !== "sme") {
       return res.status(403).json({ error: "Access denied" });
     }
 
@@ -1382,7 +1382,7 @@ app.delete("/api/sme/profile", async (req: Request, res: Response) => {
     const token = authHeader.split(" ")[1];
     const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
 
-    if (decoded.role !== "sme") {
+    if (decoded.role?.toLowerCase() !== "sme") {
       return res.status(403).json({ error: "Access denied" });
     }
 
@@ -1404,7 +1404,7 @@ app.post("/api/projects", async (req: Request, res: Response) => {
     const token = authHeader.split(" ")[1];
     const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
 
-    if (decoded.role !== "sme") {
+    if (decoded.role?.toLowerCase() !== "sme") {
       return res.status(403).json({ error: "Access denied" });
     }
 
@@ -1450,7 +1450,7 @@ app.get("/api/projects", async (req: Request, res: Response) => {
     const token = authHeader.split(" ")[1];
     const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
 
-    if (decoded.role !== "sme") {
+    if (decoded.role?.toLowerCase() !== "sme") {
       return res.status(403).json({ error: "Access denied" });
     }
 

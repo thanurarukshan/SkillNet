@@ -43,6 +43,9 @@ interface Profile {
   name: string;
   email: string;
   category: string;
+  company_registration_no?: string;
+  industry?: string;
+  business_type?: string;
 }
 
 interface Project {
@@ -87,7 +90,13 @@ export default function SmeDashboard() {
   const [loadingRecs, setLoadingRecs] = useState(false);
 
   // Form states
-  const [profileForm, setProfileForm] = useState({ name: "", email: "" });
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    email: "",
+    company_registration_no: "",
+    industry: "",
+    business_type: ""
+  });
   const [projectForm, setProjectForm] = useState({
     p_name: "",
     p_description: "",
@@ -119,7 +128,13 @@ export default function SmeDashboard() {
       if (res.ok) {
         const data = await res.json();
         setProfile({ ...data.user, email: data.user.username });
-        setProfileForm({ name: data.user.name, email: data.user.username });
+        setProfileForm({
+          name: data.user.name,
+          email: data.user.username,
+          company_registration_no: data.user.company_registration_no || "",
+          industry: data.user.industry || "",
+          business_type: data.user.business_type || ""
+        });
       } else {
         router.push("/");
       }
@@ -159,7 +174,12 @@ export default function SmeDashboard() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: profileForm.name }),
+        body: JSON.stringify({
+          name: profileForm.name,
+          company_registration_no: profileForm.company_registration_no,
+          industry: profileForm.industry,
+          business_type: profileForm.business_type
+        }),
       });
 
       if (res.ok) {
@@ -550,8 +570,29 @@ export default function SmeDashboard() {
             <TextField
               label="Email"
               fullWidth
+              disabled
               value={profileForm.email}
-              onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+              helperText="Email cannot be changed"
+            />
+            <TextField
+              label="Company Registration Number"
+              fullWidth
+              value={profileForm.company_registration_no}
+              onChange={(e) => setProfileForm({ ...profileForm, company_registration_no: e.target.value })}
+            />
+            <TextField
+              label="Industry"
+              fullWidth
+              value={profileForm.industry}
+              onChange={(e) => setProfileForm({ ...profileForm, industry: e.target.value })}
+              placeholder="e.g., Technology, Healthcare, Finance"
+            />
+            <TextField
+              label="Business Type"
+              fullWidth
+              value={profileForm.business_type}
+              onChange={(e) => setProfileForm({ ...profileForm, business_type: e.target.value })}
+              placeholder="e.g., Software Development, Consulting"
             />
           </Stack>
         </DialogContent>
