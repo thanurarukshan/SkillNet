@@ -455,6 +455,471 @@ app.get("/api/getCompanyInfo", async (req: Request, res: Response) => {
   }
 });
 
+// =====================================================
+// COMPANY JOB ROLES CRUD
+// =====================================================
+
+// Create job role
+app.post("/api/job-roles", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role.toLowerCase() !== "company") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const {
+      role_name,
+      role_description,
+      skills_required,
+      job_type,
+      contract_period,
+      payment_type,
+      payment_amount
+    } = req.body;
+
+    if (!role_name || !job_type || !payment_type) {
+      return res.status(400).json({ error: "Role name, job type, and payment type are required" });
+    }
+
+    const [result]: any = await pool.query(
+      `INSERT INTO job_roles (company_id, role_name, role_description, skills_required, job_type, contract_period, payment_type, payment_amount)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        decoded.id,
+        role_name,
+        role_description || null,
+        JSON.stringify(skills_required || []),
+        job_type,
+        job_type === "contract" ? contract_period || null : null,
+        payment_type,
+        payment_type === "fixed" ? payment_amount || null : null
+      ]
+    );
+
+    res.status(201).json({ message: "Job role created successfully", jr_id: result.insertId });
+  } catch (err) {
+    console.error("Create Job Role Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// List company's job roles
+app.get("/api/job-roles", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role.toLowerCase() !== "company") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const [roles]: any = await pool.query(
+      "SELECT * FROM job_roles WHERE company_id = ? ORDER BY created_at DESC",
+      [decoded.id]
+    );
+
+    roles.forEach((r: any) => {
+      if (typeof r.skills_required === "string") {
+        try { r.skills_required = JSON.parse(r.skills_required); } catch { }
+      }
+    });
+
+    res.json({ roles });
+  } catch (err) {
+    console.error("List Job Roles Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get hire statuses for all company job roles
+app.get("/api/job-roles/hire-statuses", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const [hires]: any = await pool.query(`
+      SELECT chr.chr_id, chr.job_role_id, chr.student_id, chr.message, chr.contact_info,
+             chr.status, chr.created_at,
+             a.name AS student_name, a.username AS student_email,
+             a.department AS student_department, a.academic_year AS student_academic_year,
+             s.verified_skills, s.unverified_skills
+      FROM company_hire_requests chr
+      JOIN auth a ON chr.student_id = a.id
+      LEFT JOIN skills s ON chr.student_id = s.student_id
+      WHERE chr.company_id = ? AND chr.status = 'accepted'
+    `, [decoded.id]);
+
+    const hireMap: any = {};
+    for (const hire of hires) {
+      let verified = hire.verified_skills;
+      let unverified = hire.unverified_skills;
+      if (typeof verified === "string") try { verified = JSON.parse(verified); } catch { verified = []; }
+      if (typeof unverified === "string") try { unverified = JSON.parse(unverified); } catch { unverified = []; }
+
+      hireMap[hire.job_role_id] = {
+        chr_id: hire.chr_id,
+        student_id: hire.student_id,
+        student_name: hire.student_name,
+        student_email: hire.student_email,
+        student_department: hire.student_department,
+        student_academic_year: hire.student_academic_year,
+        verified_skills: verified || [],
+        unverified_skills: unverified || [],
+        hired_at: hire.created_at,
+      };
+    }
+
+    res.json({ hire_statuses: hireMap });
+  } catch (err) {
+    console.error("Hire statuses error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get single job role
+app.get("/api/job-roles/:id", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const [roles]: any = await pool.query(
+      "SELECT * FROM job_roles WHERE jr_id = ? AND company_id = ?",
+      [req.params.id, decoded.id]
+    );
+
+    if (!roles.length) return res.status(404).json({ error: "Job role not found" });
+
+    const role = roles[0];
+    if (typeof role.skills_required === "string") {
+      try { role.skills_required = JSON.parse(role.skills_required); } catch { }
+    }
+
+    res.json({ role });
+  } catch (err) {
+    console.error("Get Job Role Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Update job role
+app.put("/api/job-roles/:id", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role.toLowerCase() !== "company") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const {
+      role_name,
+      role_description,
+      skills_required,
+      job_type,
+      contract_period,
+      payment_type,
+      payment_amount
+    } = req.body;
+
+    const [result]: any = await pool.query(
+      `UPDATE job_roles SET 
+        role_name = ?, role_description = ?, skills_required = ?, 
+        job_type = ?, contract_period = ?, payment_type = ?, payment_amount = ?
+       WHERE jr_id = ? AND company_id = ?`,
+      [
+        role_name,
+        role_description || null,
+        JSON.stringify(skills_required || []),
+        job_type,
+        job_type === "contract" ? contract_period || null : null,
+        payment_type,
+        payment_type === "fixed" ? payment_amount || null : null,
+        req.params.id,
+        decoded.id
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Job role not found" });
+    }
+
+    res.json({ message: "Job role updated successfully" });
+  } catch (err) {
+    console.error("Update Job Role Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Delete job role
+app.delete("/api/job-roles/:id", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role.toLowerCase() !== "company") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const [result]: any = await pool.query(
+      "DELETE FROM job_roles WHERE jr_id = ? AND company_id = ?",
+      [req.params.id, decoded.id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Job role not found" });
+    }
+
+    res.json({ message: "Job role deleted successfully" });
+  } catch (err) {
+    console.error("Delete Job Role Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// =====================================================
+// COMPANY JOB ROLE RECOMMENDATIONS & HIRE REQUESTS
+// =====================================================
+
+// Get AI recommendations for a job role
+app.get("/api/job-roles/:id/recommendations", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    // Get job role details
+    const [roles]: any = await pool.query(
+      "SELECT * FROM job_roles WHERE jr_id = ? AND company_id = ?",
+      [req.params.id, decoded.id]
+    );
+
+    if (!roles.length) return res.status(404).json({ error: "Job role not found" });
+
+    const role = roles[0];
+    let skills = role.skills_required;
+    if (typeof skills === "string") {
+      try { skills = JSON.parse(skills); } catch { skills = []; }
+    }
+
+    // Call recruiter engine ML model
+    try {
+      const mlResponse = await fetch("http://localhost:5004/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          position: role.role_name,
+          skills: skills,
+          top_n: 20
+        }),
+      });
+
+      if (mlResponse.ok) {
+        const mlData = await mlResponse.json();
+        return res.json({
+          job_role: {
+            jr_id: role.jr_id,
+            role_name: role.role_name,
+            skills_required: skills
+          },
+          recommendations: mlData.ranked_students || [],
+          total_evaluated: mlData.total_evaluated,
+          total_matched: mlData.total_matched,
+        });
+      }
+    } catch (mlErr) {
+      console.error("ML model error:", mlErr);
+    }
+
+    // Fallback: keyword matching if ML is down
+    const [students]: any = await pool.query(`
+      SELECT s.student_id, s.verified_skills, s.unverified_skills,
+             a.name, a.username AS email, a.department, a.academic_year
+      FROM skills s JOIN auth a ON s.student_id = a.id
+      WHERE a.category = 'Student'
+    `);
+
+    const recommendations = students.map((stu: any) => {
+      let verified = stu.verified_skills;
+      let unverified = stu.unverified_skills;
+      if (typeof verified === "string") try { verified = JSON.parse(verified); } catch { verified = []; }
+      if (typeof unverified === "string") try { unverified = JSON.parse(unverified); } catch { unverified = []; }
+
+      const skillsLower = (skills as string[]).map((s: string) => s.toLowerCase());
+      const verifiedLower = (verified || []).map((s: string) => s.toLowerCase());
+      const unverifiedLower = (unverified || []).map((s: string) => s.toLowerCase());
+
+      const vMatches = skillsLower.filter((s: string) => verifiedLower.includes(s)).length;
+      const uMatches = skillsLower.filter((s: string) => unverifiedLower.includes(s)).length;
+      const total = skillsLower.length || 1;
+      const score = ((vMatches / total) * 70) + ((uMatches / total) * 30);
+
+      return {
+        student_id: stu.student_id,
+        name: stu.name,
+        email: stu.email,
+        department: stu.department,
+        academic_year: stu.academic_year,
+        verified_skills: verified || [],
+        unverified_skills: unverified || [],
+        score: Math.round(score * 100) / 100
+      };
+    }).filter((s: any) => s.score > 0).sort((a: any, b: any) => b.score - a.score);
+
+    res.json({
+      job_role: { jr_id: role.jr_id, role_name: role.role_name, skills_required: skills },
+      recommendations,
+      total_evaluated: students.length,
+      total_matched: recommendations.length,
+      fallback: true
+    });
+  } catch (err) {
+    console.error("Job Role Recommendations Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Send hire request from company to student
+app.post("/api/job-roles/:id/send-hire-request", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role.toLowerCase() !== "company") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const { student_id, message, contact_info } = req.body;
+    if (!student_id) return res.status(400).json({ error: "Student ID is required" });
+
+    // Verify ownership of job role
+    const [roles]: any = await pool.query(
+      "SELECT * FROM job_roles WHERE jr_id = ? AND company_id = ?",
+      [req.params.id, decoded.id]
+    );
+    if (!roles.length) return res.status(404).json({ error: "Job role not found" });
+
+    // Check for duplicate
+    const [existing]: any = await pool.query(
+      "SELECT * FROM company_hire_requests WHERE job_role_id = ? AND student_id = ?",
+      [req.params.id, student_id]
+    );
+    if (existing.length) return res.status(409).json({ error: "Hire request already sent to this student for this role" });
+
+    const [result]: any = await pool.query(
+      `INSERT INTO company_hire_requests (job_role_id, company_id, student_id, message, contact_info)
+       VALUES (?, ?, ?, ?, ?)`,
+      [req.params.id, decoded.id, student_id, message || null, contact_info || null]
+    );
+
+    res.status(201).json({ message: "Hire request sent successfully", chr_id: result.insertId });
+  } catch (err) {
+    console.error("Send Hire Request Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Student: Get hire requests
+app.get("/api/student/hire-requests", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const [requests]: any = await pool.query(`
+      SELECT chr.*, jr.role_name, jr.role_description, jr.skills_required, jr.job_type, 
+             jr.contract_period, jr.payment_type, jr.payment_amount,
+             a.name AS company_name, a.username AS company_email, a.industry
+      FROM company_hire_requests chr
+      JOIN job_roles jr ON chr.job_role_id = jr.jr_id
+      JOIN auth a ON chr.company_id = a.id
+      WHERE chr.student_id = ?
+      ORDER BY chr.created_at DESC
+    `, [decoded.id]);
+
+    requests.forEach((r: any) => {
+      if (typeof r.skills_required === "string") {
+        try { r.skills_required = JSON.parse(r.skills_required); } catch { }
+      }
+    });
+
+    res.json({ requests });
+  } catch (err) {
+    console.error("Student Hire Requests Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Student: Accept hire request
+app.post("/api/student/hire-requests/:id/accept", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const [result]: any = await pool.query(
+      "UPDATE company_hire_requests SET status = 'accepted' WHERE chr_id = ? AND student_id = ?",
+      [req.params.id, decoded.id]
+    );
+
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Request not found" });
+    res.json({ message: "Hire request accepted" });
+  } catch (err) {
+    console.error("Accept Hire Request Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Student: Reject hire request
+app.post("/api/student/hire-requests/:id/reject", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const [result]: any = await pool.query(
+      "UPDATE company_hire_requests SET status = 'rejected' WHERE chr_id = ? AND student_id = ?",
+      [req.params.id, decoded.id]
+    );
+
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Request not found" });
+    res.json({ message: "Hire request rejected" });
+  } catch (err) {
+    console.error("Reject Hire Request Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 app.post("/api/addProject", async (req: Request, res: Response) => {
   console.log("AddProject:", req.body);
   console.log("AddProject:1", req.headers.authorization);

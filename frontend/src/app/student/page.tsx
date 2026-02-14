@@ -19,8 +19,11 @@ import {
   Stack,
   AppBar,
   Toolbar,
+  Alert,
+  Divider,
+  CircularProgress,
 } from "@mui/material";
-import { Add, Groups } from "@mui/icons-material";
+import { Add, Groups, Work, CheckCircle, Cancel, AttachMoney, Business } from "@mui/icons-material";
 import UserMenu from "../../components/UserMenu";
 import { useRouter } from "next/navigation";
 
@@ -32,6 +35,8 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [verifiedSkills, setVerifiedSkills] = useState<string[]>([]);
   const [unverifiedSkills, setUnverifiedSkills] = useState<string[]>([]);
+  const [companyOffers, setCompanyOffers] = useState<any[]>([]);
+  const [loadingOffers, setLoadingOffers] = useState(false);
 
   const [studentInfo, setStudentInfo] = useState({
     id: 0,
@@ -47,14 +52,10 @@ export default function StudentDashboard() {
     { id: 2, name: "Team Beta", members: ["John", "Alex"] },
   ]);
 
-  const [jobs] = useState([
-    { id: 1, company: "Google", position: "Frontend Intern" },
-    { id: 2, company: "Microsoft", position: "Backend Intern" },
-  ]);
-
   useEffect(() => {
     fetchStudentInfo();
     fetchStudentSkills();
+    fetchCompanyOffers();
   }, []);
 
   const fetchStudentInfo = async () => {
@@ -165,6 +166,72 @@ export default function StudentDashboard() {
     }
   };
 
+  const fetchCompanyOffers = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    setLoadingOffers(true);
+    try {
+      const res = await fetch("http://localhost:5000/api/student/hire-requests", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCompanyOffers(data.requests || []);
+      }
+    } catch (err) {
+      console.error("Error fetching company offers:", err);
+    } finally {
+      setLoadingOffers(false);
+    }
+  };
+
+  const handleAcceptOffer = async (chrId: number) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/student/hire-requests/${chrId}/accept`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        alert("Job offer accepted! The company will be notified.");
+        fetchCompanyOffers();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to accept");
+      }
+    } catch (err) {
+      alert("Error accepting offer");
+    }
+  };
+
+  const handleRejectOffer = async (chrId: number) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/student/hire-requests/${chrId}/reject`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        alert("Job offer rejected.");
+        fetchCompanyOffers();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to reject");
+      }
+    } catch (err) {
+      alert("Error rejecting offer");
+    }
+  };
+
+  const jobTypeLabel = (t: string) => {
+    if (t === "contract") return "Contract";
+    if (t === "employment") return "Permanent";
+    if (t === "intern") return "Internship";
+    return t;
+  };
+
   const handleVerifySkill = async (skill: string) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -241,6 +308,13 @@ export default function StudentDashboard() {
             sx={{ mr: 2, fontWeight: "bold" }}
           >
             Dashboard
+          </Button>
+          <Button
+            color="inherit"
+            onClick={() => router.push("/student/hiring-requests")}
+            sx={{ mr: 2, fontWeight: "bold" }}
+          >
+            Hiring Requests
           </Button>
           <UserMenu
             userName={studentInfo.name}
@@ -429,26 +503,125 @@ export default function StudentDashboard() {
           </Box>
         )}
 
-        {/* JOBS */}
+        {/* JOBS - Company Hire Requests */}
         {tabIndex === 2 && (
-          <Stack direction="row" justifyContent="center" flexWrap="wrap" gap={3}>
-            {jobs.map((j) => (
-              <Card key={j.id} sx={{ width: 260, p: 2 }}>
-                <Typography variant="h6">{j.company}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {j.position}
-                </Typography>
-                <Stack direction="row" gap={2} mt={2}>
-                  <Button variant="contained" color="success" fullWidth>
-                    Accept
-                  </Button>
-                  <Button variant="outlined" color="error" fullWidth>
-                    Reject
-                  </Button>
-                </Stack>
-              </Card>
-            ))}
-          </Stack>
+          <Box maxWidth={900} mx="auto">
+            <Typography variant="h5" fontWeight="bold" mb={3}>
+              <Work sx={{ mr: 1, verticalAlign: "middle" }} />
+              Job Offers from Companies
+            </Typography>
+
+            {loadingOffers ? (
+              <Box textAlign="center" py={4}>
+                <CircularProgress />
+              </Box>
+            ) : companyOffers.length === 0 ? (
+              <Alert severity="info">
+                No job offers received yet. Companies can find you based on your skills!
+              </Alert>
+            ) : (
+              <Stack spacing={3}>
+                {companyOffers.map((offer) => (
+                  <Card key={offer.chr_id} sx={{ "&:hover": { boxShadow: 4 }, transition: "all 0.2s" }}>
+                    <CardContent>
+                      <Stack spacing={2}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="start">
+                          <Box flex={1}>
+                            <Typography variant="h6" fontWeight="bold">
+                              {offer.role_name}
+                            </Typography>
+                            {offer.role_description && (
+                              <Typography variant="body2" color="text.secondary" mt={0.5}>
+                                {offer.role_description}
+                              </Typography>
+                            )}
+
+                            <Stack direction="row" spacing={1} mt={2} mb={2} flexWrap="wrap">
+                              <Chip
+                                label={offer.status.toUpperCase()}
+                                size="small"
+                                color={offer.status === "accepted" ? "success" : offer.status === "rejected" ? "error" : "warning"}
+                              />
+                              <Chip label={jobTypeLabel(offer.job_type)} size="small" variant="outlined"
+                                color={offer.job_type === "employment" ? "success" : offer.job_type === "contract" ? "warning" : "info"}
+                              />
+                              {offer.job_type === "contract" && offer.contract_period && (
+                                <Chip label={offer.contract_period} size="small" variant="outlined" />
+                              )}
+                              <Chip
+                                icon={<AttachMoney />}
+                                label={offer.payment_type === "fixed" ? `$${offer.payment_amount?.toLocaleString()}` : "To discuss"}
+                                size="small" variant="outlined"
+                              />
+                            </Stack>
+
+                            {Array.isArray(offer.skills_required) && offer.skills_required.length > 0 && (
+                              <Box mb={2}>
+                                <Typography variant="body2" fontWeight="bold" mb={0.5}>Required Skills:</Typography>
+                                <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                  {offer.skills_required.map((s: string, i: number) => (
+                                    <Chip key={i} label={s} size="small" color="primary" variant="outlined" />
+                                  ))}
+                                </Stack>
+                              </Box>
+                            )}
+
+                            <Divider sx={{ my: 1.5 }} />
+
+                            <Box sx={{ bgcolor: "grey.50", p: 2, borderRadius: 1 }}>
+                              <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+                                <Business fontSize="small" color="primary" />
+                                <Typography variant="body2" fontWeight="bold">{offer.company_name}</Typography>
+                                {offer.industry && (
+                                  <Chip label={offer.industry} size="small" variant="outlined" />
+                                )}
+                              </Stack>
+                              <Typography variant="body2" color="text.secondary">📧 {offer.company_email}</Typography>
+                              {offer.contact_info && (
+                                <Typography variant="body2" color="text.secondary">📞 {offer.contact_info}</Typography>
+                              )}
+                              {offer.message && (
+                                <Typography variant="body2" mt={1}>
+                                  <strong>Message:</strong> {offer.message}
+                                </Typography>
+                              )}
+                            </Box>
+
+                            <Typography variant="caption" color="text.secondary" mt={1} display="block">
+                              Received: {new Date(offer.created_at).toLocaleString()}
+                            </Typography>
+                          </Box>
+
+                          {offer.status === "pending" && (
+                            <Stack spacing={1} ml={2} minWidth={100}>
+                              <Button
+                                variant="contained"
+                                color="success"
+                                startIcon={<CheckCircle />}
+                                onClick={() => handleAcceptOffer(offer.chr_id)}
+                                size="small"
+                              >
+                                Accept
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                startIcon={<Cancel />}
+                                onClick={() => handleRejectOffer(offer.chr_id)}
+                                size="small"
+                              >
+                                Reject
+                              </Button>
+                            </Stack>
+                          )}
+                        </Stack>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Stack>
+            )}
+          </Box>
         )}
       </Box>
 

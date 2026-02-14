@@ -172,6 +172,158 @@ app.post("/api/addJob", verifyToken, async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to add job" });
   }
 });
+
+// =====================================================
+// COMPANY JOB ROLES ROUTES
+// =====================================================
+
+// Create job role
+app.post("/api/job-roles", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/job-roles`, req.body, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.status(response.status).json(response.data);
+  } catch (err: any) {
+    console.error("Gateway create job-role error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to create job role" });
+  }
+});
+
+// List job roles
+app.get("/api/job-roles", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/job-roles`, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway list job-roles error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to list job roles" });
+  }
+});
+
+// Get hire statuses for all company job roles
+app.get("/api/job-roles/hire-statuses", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/job-roles/hire-statuses`, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway hire-statuses error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to get hire statuses" });
+  }
+});
+
+// Get single job role
+app.get("/api/job-roles/:id", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/job-roles/${req.params.id}`, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway get job-role error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to get job role" });
+  }
+});
+
+// Update job role
+app.put("/api/job-roles/:id", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.put(`${BACKEND_BASE_URL}/api/job-roles/${req.params.id}`, req.body, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway update job-role error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to update job role" });
+  }
+});
+
+// Delete job role
+app.delete("/api/job-roles/:id", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.delete(`${BACKEND_BASE_URL}/api/job-roles/${req.params.id}`, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway delete job-role error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to delete job role" });
+  }
+});
+
+// =====================================================
+// COMPANY HIRE REQUESTS & RECOMMENDATIONS ROUTES
+// =====================================================
+
+// Get AI recommendations for a job role
+app.get("/api/job-roles/:id/recommendations", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/job-roles/${req.params.id}/recommendations`, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway job-role recommendations error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to get recommendations" });
+  }
+});
+
+// Send hire request
+app.post("/api/job-roles/:id/send-hire-request", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/job-roles/${req.params.id}/send-hire-request`, req.body, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.status(response.status).json(response.data);
+  } catch (err: any) {
+    console.error("Gateway send-hire-request error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to send hire request" });
+  }
+});
+
+// Student: Get hire requests
+app.get("/api/student/hire-requests", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.get(`${BACKEND_BASE_URL}/api/student/hire-requests`, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway student hire-requests error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to get hire requests" });
+  }
+});
+
+// Student: Accept hire request
+app.post("/api/student/hire-requests/:id/accept", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/student/hire-requests/${req.params.id}/accept`, {}, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway accept hire-request error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to accept hire request" });
+  }
+});
+
+// Student: Reject hire request
+app.post("/api/student/hire-requests/:id/reject", verifyToken, async (req: Request, res: Response) => {
+  try {
+    const response = await axios.post(`${BACKEND_BASE_URL}/api/student/hire-requests/${req.params.id}/reject`, {}, {
+      headers: { Authorization: req.headers.authorization! },
+    });
+    res.json(response.data);
+  } catch (err: any) {
+    console.error("Gateway reject hire-request error:", err.message);
+    res.status(err.response?.status || 500).json(err.response?.data || { error: "Failed to reject hire request" });
+  }
+});
+
 //-----------------------SME Routes--------------------------------
 // Get SME Info
 app.get("/api/getSmeInfo", verifyToken, async (req, res) => {
