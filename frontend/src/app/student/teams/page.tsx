@@ -35,6 +35,7 @@ import {
     EmojiEvents,
     PersonAdd,
     ArrowBack,
+    Business,
 } from "@mui/icons-material";
 import UserMenu from "../../../components/UserMenu";
 import { useRouter } from "next/navigation";
@@ -75,10 +76,15 @@ export default function TeamsPage() {
     });
     const [newSkillInput, setNewSkillInput] = useState("");
 
+    // Hiring Requests
+    const [hiringRequests, setHiringRequests] = useState<any[]>([]);
+    const [loadingRequests, setLoadingRequests] = useState(false);
+
     useEffect(() => {
         checkAuth();
         fetchMyTeams();
         fetchRecommendations();
+        fetchHiringRequests();
     }, []);
 
     // Fetch fresh recommendations every time user clicks Find Teams tab
@@ -254,6 +260,82 @@ export default function TeamsPage() {
         });
     };
 
+    const fetchHiringRequests = async () => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        setLoadingRequests(true);
+        try {
+            const res = await fetch("http://localhost:5000/api/teams/hiring-requests", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setHiringRequests(data.requests);
+            }
+        } catch (err) {
+            console.error("Error fetching hiring requests:", err);
+        } finally {
+            setLoadingRequests(false);
+        }
+    };
+
+    const handleAcceptRequest = async (requestId: number) => {
+        if (!confirm("Accept this hiring request?")) return;
+
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        try {
+            const res = await fetch(`http://localhost:5000/api/teams/hiring-requests/${requestId}/accept`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (res.ok) {
+                alert("Hiring request accepted! Project assigned to your team.");
+                fetchHiringRequests();
+                fetchMyTeams();
+            } else {
+                alert("Failed to accept request");
+            }
+        } catch (err) {
+            console.error("Error accepting request:", err);
+            alert("Error accepting request");
+        }
+    };
+
+    const handleRejectRequest = async (requestId: number) => {
+        if (!confirm("Reject this hiring request?")) return;
+
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        try {
+            const res = await fetch(`http://localhost:5000/api/teams/hiring-requests/${requestId}/reject`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (res.ok) {
+                alert("Hiring request rejected");
+                fetchHiringRequests();
+            } else {
+                alert("Failed to reject request");
+            }
+        } catch (err) {
+            console.error("Error rejecting request:", err);
+        }
+    };
+
+    const handleRemoveSkillFromNewTeamOriginal = (skill: string) => {
+        setNewTeam({
+            ...newTeam,
+            skillsRequired: newTeam.skillsRequired.filter((s) => s !== skill),
+        });
+    };
+
     const handleLeaveTeam = async (teamId: number) => {
         if (!confirm("Are you sure you want to leave this team?")) return;
 
@@ -403,6 +485,11 @@ export default function TeamsPage() {
                         <Tab label="My Teams" icon={<Groups />} iconPosition="start" />
                         <Tab label="Find Teams" icon={<Search />} iconPosition="start" />
                         <Tab label="Create Team" icon={<Add />} iconPosition="start" />
+                        <Tab
+                            label={`Hiring Requests ${hiringRequests.length > 0 ? `(${hiringRequests.filter(r => r.status === 'pending').length})` : ''}`}
+                            icon={<Business />}
+                            iconPosition="start"
+                        />
                     </Tabs>
                 </Card>
 
@@ -600,6 +687,136 @@ export default function TeamsPage() {
                                 </Stack>
                             </Stack>
                         </Card>
+                    </Box>
+                )}
+
+                {/* TAB 4: HIRING REQUESTS */}
+                {tabIndex === 3 && (
+                    <Box maxWidth={1000} mx="auto">
+                        <Typography variant="h5" mb={3} fontWeight="bold">
+                            Hiring Requests
+                        </Typography>
+
+                        {loadingRequests ? (
+                            <Card sx={{ p: 6, textAlign: "center" }}>
+                                <CircularProgress />
+                                <Typography mt={2}>Loading requests...</Typography>
+                            </Card>
+                        ) : hiringRequests.length === 0 ? (
+                            <Card sx={{ p: 4, textAlign: "center" }}>
+                                <Typography color="text.secondary">
+                                    No hiring requests yet. Create teams and wait for SMEs to send project offers!
+                                </Typography>
+                            </Card>
+                        ) : (
+                            <Stack spacing={3}>
+                                {hiringRequests.map((request) => (
+                                    <Card key={request.hr_id} sx={{ p: 3 }}>
+                                        <Grid container spacing={3}>
+                                            <Grid item xs={12} md={8}>
+                                                <Stack spacing={2}>
+                                                    <Box>
+                                                        <Typography variant="h6" fontWeight="bold">
+                                                            {request.p_name}
+                                                        </Typography>
+                                                        <Typography color="text.secondary" variant="body2">
+                                                            From: {request.sme_name} ({request.sme_email})
+                                                        </Typography>
+                                                        <Chip
+                                                            label={request.status.toUpperCase()}
+                                                            size="small"
+                                                            color={
+                                                                request.status === 'accepted' ? 'success' :
+                                                                    request.status === 'rejected' ? 'error' : 'warning'
+                                                            }
+                                                            sx={{ mt: 1 }}
+                                                        />
+                                                    </Box>
+
+                                                    <Typography variant="body2">
+                                                        {request.p_description}
+                                                    </Typography>
+
+                                                    <Box>
+                                                        <Typography variant="body2">
+                                                            <strong>Duration:</strong> {request.p_time_period}
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            <strong>Value:</strong>{' '}
+                                                            {request.p_value_type === 'fixed'
+                                                                ? `$${request.p_value_amount?.toLocaleString()}`
+                                                                : 'Discuss Later'}
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            <strong>Contact:</strong> {request.sme_contact}
+                                                        </Typography>
+                                                    </Box>
+
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight="bold" mb={0.5}>
+                                                            Required Skills:
+                                                        </Typography>
+                                                        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                                            {(request.p_skills_req || []).map((skill: string, idx: number) => (
+                                                                <Chip key={idx} label={skill} size="small" color="primary" sx={{ mb: 0.5 }} />
+                                                            ))}
+                                                        </Stack>
+                                                    </Box>
+
+                                                    {request.message && (
+                                                        <Alert severity="info">
+                                                            <Typography variant="body2" fontWeight="bold">Message from SME:</Typography>
+                                                            <Typography variant="body2">{request.message}</Typography>
+                                                        </Alert>
+                                                    )}
+                                                </Stack>
+                                            </Grid>
+
+                                            <Grid item xs={12} md={4}>
+                                                <Stack spacing={2} height="100%" justifyContent="center">
+                                                    {request.status === 'pending' ? (
+                                                        <>
+                                                            <Button
+                                                                variant="contained"
+                                                                color="success"
+                                                                fullWidth
+                                                                onClick={() => handleAcceptRequest(request.hr_id)}
+                                                            >
+                                                                Accept Request
+                                                            </Button>
+                                                            <Button
+                                                                variant="outlined"
+                                                                color="error"
+                                                                fullWidth
+                                                                onClick={() => handleRejectRequest(request.hr_id)}
+                                                            >
+                                                                Reject
+                                                            </Button>
+                                                        </>
+                                                    ) : request.status === 'accepted' ? (
+                                                        <Alert severity="success">
+                                                            <Typography variant="body2">
+                                                                ✅ This project is now assigned to your team!
+                                                            </Typography>
+                                                        </Alert>
+                                                    ) : (
+                                                        <Alert severity="error">
+                                                            <Typography variant="body2">
+                                                                Request was rejected
+                                                            </Typography>
+                                                        </Alert>
+                                                    )}
+
+                                                    <Typography variant="caption" color="text.secondary" textAlign="center">
+                                                        Received: {new Date(request.created_at).toLocaleDateString()}
+                                                    </Typography>
+                                                </Stack>
+                                            </Grid>
+                                        </Grid>
+                                    </Card>
+                                ))}
+                            </Stack>
+                        )}
                     </Box>
                 )}
             </Box>

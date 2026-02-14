@@ -45,10 +45,14 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
                 onClose();
 
                 // Redirect based on role
-                const role = data.user.role;
-                if (role === "Student") router.push("/student");
-                else if (role === "SME") router.push("/sme");
-                else if (role === "Company") router.push("/companies");
+                const role = data.user.role ? data.user.role.toLowerCase().trim() : "";
+
+                setTimeout(() => {
+                    if (role === "student") router.push("/student");
+                    else if (role === "sme") router.push("/sme");
+                    else if (role === "company") router.push("/companies");
+                    else console.error("Unknown role:", role);
+                }, 100);
             } else {
                 alert(data.error || "Invalid credentials.");
             }

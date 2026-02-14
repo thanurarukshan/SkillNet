@@ -20,6 +20,7 @@ import mysql, { PoolOptions } from "mysql2/promise";
 // import bcrypt from "bcrypt";
 const bcrypt = require("bcrypt");
 import jwt from "jsonwebtoken";
+import cors from "cors";
 
 // Load environment variables
 dotenv.config();
@@ -45,6 +46,7 @@ const dbConfig: PoolOptions = {
 const pool = mysql.createPool(dbConfig);
 
 // Middleware
+app.use(cors({ origin: ["http://localhost:3000", "http://localhost:3001"], credentials: true }));
 app.use(express.json());
 
 // Test route for database connectivity
@@ -1260,6 +1262,530 @@ app.get("/api/getTeamRecommendations", async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error("GetTeamRecommendations Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// =====================================================
+// SME DASHBOARD ENDPOINTS
+// =====================================================
+
+// Create tables if they don't exist
+async function initSMETables() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS projects (
+        p_id INT PRIMARY KEY AUTO_INCREMENT,
+        sme_id INT NOT NULL,
+        p_name VARCHAR(255) NOT NULL,
+        p_description TEXT,
+        p_time_period VARCHAR(100),
+        p_skills_req JSON NOT NULL,
+        p_value_type ENUM('fixed', 'discuss') DEFAULT 'discuss',
+        p_value_amount DECIMAL(10, 2),
+        hired_team_id INT DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (sme_id) REFERENCES auth(id) ON DELETE CASCADE,
+        INDEX idx_sme_id (sme_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS hiring_requests (
+        hr_id INT PRIMARY KEY AUTO_INCREMENT,
+        project_id INT NOT NULL,
+        team_id INT NOT NULL,
+        sme_id INT NOT NULL,
+        message TEXT,
+        sme_email VARCHAR(255),
+        sme_contact VARCHAR(100),
+        status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        responded_at TIMESTAMP NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(p_id) ON DELETE CASCADE,
+        FOREIGN KEY (team_id) REFERENCES teams(t_id) ON DELETE CASCADE,
+        FOREIGN KEY (sme_id) REFERENCES auth(id) ON DELETE CASCADE,
+        INDEX idx_team_id (team_id),
+        INDEX idx_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    console.log("✅ SME dashboard tables initialized");
+  } catch (err) {
+    console.error("SME tables initialization error:", err);
+  }
+}
+
+// initSMETables(); // Tables already created manually with root credentials
+
+// SME Profile Management
+app.get("/api/sme/profile", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role !== "sme") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const [rows]: any = await pool.query(
+      "SELECT id, name, username as email, category FROM auth WHERE id = ?",
+      [decoded.id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ error: "Profile not found" });
+    }
+
+    res.json({ profile: rows[0] });
+  } catch (err) {
+    console.error("Get SME Profile Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.put("/api/sme/profile", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role !== "sme") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const { name, email } = req.body;
+
+    await pool.query(
+      "UPDATE auth SET name = ?, username = ? WHERE id = ?",
+      [name, email, decoded.id]
+    );
+
+    res.json({ message: "Profile updated successfully" });
+  } catch (err) {
+    console.error("Update SME Profile Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.delete("/api/sme/profile", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role !== "sme") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    await pool.query("DELETE FROM auth WHERE id = ?", [decoded.id]);
+
+    res.json({ message: "Account deleted successfully" });
+  } catch (err) {
+    console.error("Delete SME Profile Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Project CRUD Operations
+app.post("/api/projects", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role !== "sme") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const {
+      p_name,
+      p_description,
+      p_time_period,
+      p_skills_req,
+      p_value_type,
+      p_value_amount
+    } = req.body;
+
+    if (!p_name || !p_skills_req || !Array.isArray(p_skills_req)) {
+      return res.status(400).json({ error: "Name and skills are required" });
+    }
+
+    const [result]: any = await pool.query(
+      `INSERT INTO projects (sme_id, p_name, p_description, p_time_period, p_skills_req, p_value_type, p_value_amount)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        decoded.id,
+        p_name,
+        p_description,
+        p_time_period,
+        JSON.stringify(p_skills_req),
+        p_value_type || 'discuss',
+        p_value_amount
+      ]
+    );
+
+    res.json({ message: "Project created successfully", p_id: result.insertId });
+  } catch (err) {
+    console.error("Create Project Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/api/projects", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    if (decoded.role !== "sme") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const [projects]: any = await pool.query(
+      `SELECT p.*, t.t_name as hired_team_name, a.name as leader_name
+       FROM projects p
+       LEFT JOIN teams t ON p.hired_team_id = t.t_id
+       LEFT JOIN auth a ON t.team_leader_id = a.id
+       WHERE p.sme_id = ?
+       ORDER BY p.created_at DESC`,
+      [decoded.id]
+    );
+
+    // Parse JSON skills
+    projects.forEach((p: any) => {
+      if (typeof p.p_skills_req === 'string') {
+        p.p_skills_req = JSON.parse(p.p_skills_req);
+      }
+    });
+
+    res.json({ projects });
+  } catch (err) {
+    console.error("Get Projects Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/api/projects/:id", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const [projects]: any = await pool.query(
+      `SELECT p.*, t.t_name as hired_team_name, t.t_skills_req as hired_team_skills, 
+              a.name as leader_name, a.username as leader_email
+       FROM projects p
+       LEFT JOIN teams t ON p.hired_team_id = t.t_id
+       LEFT JOIN auth a ON t.team_leader_id = a.id
+       WHERE p.p_id = ? AND p.sme_id = ?`,
+      [req.params.id, decoded.id]
+    );
+
+    if (!projects.length) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    const project = projects[0];
+    if (typeof project.p_skills_req === 'string') {
+      project.p_skills_req = JSON.parse(project.p_skills_req);
+    }
+
+    res.json({ project });
+  } catch (err) {
+    console.error("Get Project Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.put("/api/projects/:id", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const {
+      p_name,
+      p_description,
+      p_time_period,
+      p_skills_req,
+      p_value_type,
+      p_value_amount
+    } = req.body;
+
+    await pool.query(
+      `UPDATE projects 
+       SET p_name = ?, p_description = ?, p_time_period = ?, 
+           p_skills_req = ?, p_value_type = ?, p_value_amount = ?
+       WHERE p_id = ? AND sme_id = ?`,
+      [
+        p_name,
+        p_description,
+        p_time_period,
+        JSON.stringify(p_skills_req),
+        p_value_type,
+        p_value_amount,
+        req.params.id,
+        decoded.id
+      ]
+    );
+
+    res.json({ message: "Project updated successfully" });
+  } catch (err) {
+    console.error("Update Project Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.delete("/api/projects/:id", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    await pool.query(
+      "DELETE FROM projects WHERE p_id = ? AND sme_id = ?",
+      [req.params.id, decoded.id]
+    );
+
+    res.json({ message: "Project deleted successfully" });
+  } catch (err) {
+    console.error("Delete Project Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// AI Project Matcher with Fallback
+app.get("/api/projects/:id/recommendations", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const [projects]: any = await pool.query(
+      "SELECT p_skills_req FROM projects WHERE p_id = ? AND sme_id = ?",
+      [req.params.id, decoded.id]
+    );
+
+    if (!projects.length) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    let projectSkills = projects[0].p_skills_req;
+    if (typeof projectSkills === 'string') {
+      projectSkills = JSON.parse(projectSkills);
+    }
+    const skillsString = projectSkills.join(" ");
+
+    // Validate ML API availability
+    const mlApiUrl = process.env.ML_API_URL_PROJECT || "http://localhost:5003";
+    await fetch(`${mlApiUrl}/ml/recommend`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skills: skillsString, top_n: 5 })
+    });
+
+    // Use keyword matching for recommendations
+    const [teams]: any = await pool.query(
+      `SELECT t.*, a.name as leader_name FROM teams t
+       JOIN auth a ON t.team_leader_id = a.id
+       ORDER BY t.created_at DESC LIMIT 50`
+    );
+
+    const userSkills = projectSkills.map((s: string) => s.toLowerCase());
+    const processed = teams.map((t: any) => {
+      let teamSkills: string[] = [];
+      if (typeof t.t_skills_req === 'string') {
+        try {
+          teamSkills = JSON.parse(t.t_skills_req);
+        } catch {
+          teamSkills = t.t_skills_req.split(',').map((s: string) => s.trim());
+        }
+      } else if (Array.isArray(t.t_skills_req)) {
+        teamSkills = t.t_skills_req;
+      }
+
+      const tSkills = teamSkills.map(s => s.toLowerCase());
+      const overlaps = userSkills.filter((us: string) =>
+        tSkills.some(ts => ts.includes(us) || us.includes(ts))
+      ).length;
+
+      return {
+        ...t,
+        similarity_score: overlaps / Math.max(tSkills.length, userSkills.length),
+        _c: overlaps
+      };
+    }).filter((t: any) => t._c > 0)
+      .sort((a: any, b: any) => b.similarity_score - a.similarity_score)
+      .slice(0, 5)
+      .map(({ _c, ...rest }: any) => rest);
+
+    res.json({
+      project_skills: skillsString,
+      recommendations: processed,
+      total_evaluated: teams.length
+    });
+  } catch (err) {
+    console.error("Get Recommendations Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Hiring Workflow
+app.post("/api/projects/:id/send-request", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const { team_id, message, sme_contact } = req.body;
+
+    const [sme]: any = await pool.query(
+      "SELECT username FROM auth WHERE id = ?",
+      [decoded.id]
+    );
+
+    await pool.query(
+      `INSERT INTO hiring_requests (project_id, team_id, sme_id, message, sme_email, sme_contact)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [req.params.id, team_id, decoded.id, message, sme[0].username, sme_contact]
+    );
+
+    res.json({ message: "Hiring request sent successfully" });
+  } catch (err) {
+    console.error("Send Hiring Request Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/api/teams/hiring-requests", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const [requests]: any = await pool.query(
+      `SELECT hr.*, p.p_name, p.p_description, p.p_time_period, p.p_skills_req,
+              p.p_value_type, p.p_value_amount, a.name as sme_name
+       FROM hiring_requests hr
+       JOIN projects p ON hr.project_id = p.p_id
+       JOIN auth a ON hr.sme_id = a.id
+       WHERE hr.team_id IN (SELECT t_id FROM teams WHERE team_leader_id = ?)
+       ORDER BY hr.created_at DESC`,
+      [decoded.id]
+    );
+
+    requests.forEach((r: any) => {
+      if (typeof r.p_skills_req === 'string') {
+        r.p_skills_req = JSON.parse(r.p_skills_req);
+      }
+    });
+
+    res.json({ requests });
+  } catch (err) {
+    console.error("Get Hiring Requests Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/teams/hiring-requests/:id/accept", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const [request]: any = await pool.query(
+      `SELECT hr.*, t.team_leader_id FROM hiring_requests hr
+       JOIN teams t ON hr.team_id = t.t_id
+       WHERE hr.hr_id = ?`,
+      [req.params.id]
+    );
+
+    if (!request.length || request[0].team_leader_id !== decoded.id) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    const projectId = request[0].project_id;
+    const teamId = request[0].team_id;
+
+    // Accept this request
+    await pool.query(
+      "UPDATE hiring_requests SET status = 'accepted', responded_at = NOW() WHERE hr_id = ?",
+      [req.params.id]
+    );
+
+    // Update project with hired team
+    await pool.query(
+      "UPDATE projects SET hired_team_id = ? WHERE p_id = ?",
+      [teamId, projectId]
+    );
+
+    // Reject other pending requests for this project
+    await pool.query(
+      "UPDATE hiring_requests SET status = 'rejected', responded_at = NOW() WHERE project_id = ? AND hr_id != ?",
+      [projectId, req.params.id]
+    );
+
+    res.json({ message: "Hiring request accepted successfully" });
+  } catch (err) {
+    console.error("Accept Hiring Request Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/teams/hiring-requests/:id/reject", async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+
+    const [request]: any = await pool.query(
+      `SELECT hr.*, t.team_leader_id FROM hiring_requests hr
+       JOIN teams t ON hr.team_id = t.t_id
+       WHERE hr.hr_id = ?`,
+      [req.params.id]
+    );
+
+    if (!request.length || request[0].team_leader_id !== decoded.id) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    await pool.query(
+      "UPDATE hiring_requests SET status = 'rejected', responded_at = NOW() WHERE hr_id = ?",
+      [req.params.id]
+    );
+
+    res.json({ message: "Hiring request rejected" });
+  } catch (err) {
+    console.error("Reject Hiring Request Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
