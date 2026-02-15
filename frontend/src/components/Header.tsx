@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AppBar, Toolbar, Button, Container, Box, IconButton, Menu, MenuItem, Typography } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useAuth } from "../context/AuthContext";
@@ -13,6 +14,18 @@ export default function Header() {
     const [openLogin, setOpenLogin] = useState(false);
     const [openSignup, setOpenSignup] = useState(false);
     const [anchorElNav, setAnchorElNav] = useState<null | HTMLElement>(null);
+    const [scrolled, setScrolled] = useState(false);
+    const pathname = usePathname();
+
+    const isLandingPage = pathname === "/";
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 20);
+        };
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
 
     const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorElNav(event.currentTarget);
@@ -27,11 +40,33 @@ export default function Header() {
         { name: "Features", path: "/#features" },
     ];
 
+    // On landing page: transparent when at top, glassmorphism when scrolled
+    // On other pages: always solid
+    const headerBg = isLandingPage
+        ? scrolled
+            ? "rgba(255,255,255,0.85)"
+            : "transparent"
+        : "rgba(255,255,255,0.95)";
+
+    const headerShadow = scrolled || !isLandingPage ? "0 1px 3px rgba(0,0,0,0.08)" : "none";
+    const textColor = isLandingPage && !scrolled ? "white" : "#334155";
+    const logoColor = isLandingPage && !scrolled ? "white" : "#6366f1";
+
     return (
         <>
-            <AppBar position="sticky" color="default" elevation={1} className="bg-white/80 backdrop-blur-md">
+            <AppBar
+                position="fixed"
+                elevation={0}
+                sx={{
+                    backgroundColor: headerBg,
+                    backdropFilter: scrolled || !isLandingPage ? "blur(20px)" : "none",
+                    boxShadow: headerShadow,
+                    borderBottom: scrolled || !isLandingPage ? "1px solid rgba(226,232,240,0.5)" : "none",
+                    transition: "all 0.3s ease",
+                }}
+            >
                 <Container maxWidth="xl">
-                    <Toolbar disableGutters>
+                    <Toolbar disableGutters sx={{ minHeight: { xs: 64, md: 70 } }}>
                         {/* Logo Desktop */}
                         <Typography
                             variant="h6"
@@ -41,13 +76,24 @@ export default function Header() {
                             sx={{
                                 mr: 2,
                                 display: { xs: "none", md: "flex" },
-                                fontWeight: 700,
-                                color: "primary.main",
+                                fontWeight: 800,
+                                fontSize: "1.4rem",
+                                color: logoColor,
                                 textDecoration: "none",
-                                letterSpacing: ".1rem",
+                                letterSpacing: ".05rem",
+                                transition: "color 0.3s",
                             }}
                         >
-                            SkillNet
+                            Skill
+                            <span style={{
+                                background: isLandingPage && !scrolled
+                                    ? "linear-gradient(135deg, #c7d2fe, #e9d5ff)"
+                                    : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                            }}>
+                                Net
+                            </span>
                         </Typography>
 
                         {/* Mobile Menu */}
@@ -57,27 +103,19 @@ export default function Header() {
                                 aria-controls="menu-appbar"
                                 aria-haspopup="true"
                                 onClick={handleOpenNavMenu}
-                                color="inherit"
+                                sx={{ color: textColor }}
                             >
                                 <MenuIcon />
                             </IconButton>
                             <Menu
                                 id="menu-appbar"
                                 anchorEl={anchorElNav}
-                                anchorOrigin={{
-                                    vertical: "bottom",
-                                    horizontal: "left",
-                                }}
+                                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
                                 keepMounted
-                                transformOrigin={{
-                                    vertical: "top",
-                                    horizontal: "left",
-                                }}
+                                transformOrigin={{ vertical: "top", horizontal: "left" }}
                                 open={Boolean(anchorElNav)}
                                 onClose={handleCloseNavMenu}
-                                sx={{
-                                    display: { xs: "block", md: "none" },
-                                }}
+                                sx={{ display: { xs: "block", md: "none" } }}
                             >
                                 {navLinks.map((link) => (
                                     <MenuItem key={link.name} onClick={handleCloseNavMenu} component={Link} href={link.path}>
@@ -97,44 +135,125 @@ export default function Header() {
                                 mr: 2,
                                 display: { xs: "flex", md: "none" },
                                 flexGrow: 1,
-                                fontWeight: 700,
-                                color: "primary.main",
+                                fontWeight: 800,
+                                color: logoColor,
                                 textDecoration: "none",
+                                transition: "color 0.3s",
                             }}
                         >
-                            SkillNet
+                            Skill<span style={{
+                                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                            }}>Net</span>
                         </Typography>
 
                         {/* Desktop Nav */}
-                        <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" }, justifyContent: "center", gap: 4 }}>
+                        <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" }, justifyContent: "center", gap: 1 }}>
                             {navLinks.map((link) => (
-                                <Link
+                                <Button
                                     key={link.name}
+                                    component={Link}
                                     href={link.path}
-                                    className="text-slate-600 hover:text-indigo-600 font-medium transition-colors"
+                                    sx={{
+                                        color: textColor,
+                                        fontWeight: 500,
+                                        fontSize: "0.95rem",
+                                        px: 2,
+                                        position: "relative",
+                                        transition: "color 0.3s",
+                                        "&:hover": {
+                                            backgroundColor: "transparent",
+                                            color: isLandingPage && !scrolled ? "#c7d2fe" : "#6366f1",
+                                        },
+                                        "&::after": {
+                                            content: '""',
+                                            position: "absolute",
+                                            bottom: 4,
+                                            left: "50%",
+                                            transform: "translateX(-50%)",
+                                            width: 0,
+                                            height: "2px",
+                                            backgroundColor: isLandingPage && !scrolled ? "#c7d2fe" : "#6366f1",
+                                            transition: "width 0.3s",
+                                            borderRadius: "1px",
+                                        },
+                                        "&:hover::after": { width: "60%" },
+                                    }}
                                 >
                                     {link.name}
-                                </Link>
+                                </Button>
                             ))}
                         </Box>
 
                         {/* Auth Buttons */}
                         <Box sx={{ flexGrow: 0 }}>
                             {user ? (
-                                <div className="flex items-center gap-4">
-                                    <Typography variant="body2" className="hidden sm:block font-medium">
+                                <div className="flex items-center gap-3">
+                                    <Typography
+                                        variant="body2"
+                                        sx={{
+                                            display: { xs: "none", sm: "block" },
+                                            fontWeight: 600,
+                                            color: textColor,
+                                            transition: "color 0.3s",
+                                        }}
+                                    >
                                         Hello, {user.name}
                                     </Typography>
-                                    <Button variant="outlined" color="primary" onClick={logout} size="small">
+                                    <Button
+                                        variant="outlined"
+                                        onClick={logout}
+                                        size="small"
+                                        sx={{
+                                            borderColor: isLandingPage && !scrolled ? "rgba(255,255,255,0.4)" : undefined,
+                                            color: textColor,
+                                            transition: "all 0.3s",
+                                            "&:hover": {
+                                                borderColor: isLandingPage && !scrolled ? "white" : undefined,
+                                            },
+                                        }}
+                                    >
                                         Logout
                                     </Button>
                                 </div>
                             ) : (
                                 <div className="flex gap-2">
-                                    <Button onClick={() => setOpenLogin(true)} color="inherit" className="hover:text-indigo-600">
+                                    <Button
+                                        onClick={() => setOpenLogin(true)}
+                                        sx={{
+                                            color: textColor,
+                                            fontWeight: 500,
+                                            transition: "color 0.3s",
+                                            "&:hover": {
+                                                backgroundColor: "transparent",
+                                                color: isLandingPage && !scrolled ? "#c7d2fe" : "#6366f1",
+                                            },
+                                        }}
+                                    >
                                         Sign In
                                     </Button>
-                                    <Button variant="contained" onClick={() => setOpenSignup(true)} disableElevation>
+                                    <Button
+                                        variant="contained"
+                                        onClick={() => setOpenSignup(true)}
+                                        disableElevation
+                                        sx={{
+                                            background: isLandingPage && !scrolled
+                                                ? "rgba(255,255,255,0.15)"
+                                                : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                            border: isLandingPage && !scrolled ? "1px solid rgba(255,255,255,0.3)" : "none",
+                                            backdropFilter: isLandingPage && !scrolled ? "blur(10px)" : "none",
+                                            color: "white",
+                                            fontWeight: 600,
+                                            "&:hover": {
+                                                background: isLandingPage && !scrolled
+                                                    ? "rgba(255,255,255,0.25)"
+                                                    : "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                                            },
+                                            transition: "all 0.3s",
+                                            borderRadius: "10px",
+                                        }}
+                                    >
                                         Sign Up
                                     </Button>
                                 </div>
@@ -143,6 +262,9 @@ export default function Header() {
                     </Toolbar>
                 </Container>
             </AppBar>
+
+            {/* Spacer to prevent content from hiding behind fixed header */}
+            <Box sx={{ height: { xs: 64, md: 70 } }} />
 
             <LoginModal open={openLogin} onClose={() => setOpenLogin(false)} />
             <SignupModal

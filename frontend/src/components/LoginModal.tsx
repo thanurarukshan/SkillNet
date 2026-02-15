@@ -3,14 +3,17 @@
 import { useState } from "react";
 import {
     Dialog,
-    DialogTitle,
     DialogContent,
-    DialogActions,
     Button,
     TextField,
     Tabs,
     Tab,
+    Typography,
+    Box,
+    Stack,
+    IconButton,
 } from "@mui/material";
+import { Close, School, Rocket, Business } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 
@@ -20,17 +23,14 @@ type LoginModalProps = {
 };
 
 export default function LoginModal({ open, onClose }: LoginModalProps) {
-    const [roleTab, setRoleTab] = useState(0); // 0: Student, 1: SME, 2: Company
+    const [roleTab, setRoleTab] = useState(0);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const { login } = useAuth();
     const router = useRouter();
 
     const handleSignIn = async () => {
-        const payload = {
-            email,
-            password,
-        };
+        const payload = { email, password };
 
         try {
             const res = await fetch("http://localhost:5000/api/signin", {
@@ -44,9 +44,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
                 login(data.token, data.user);
                 onClose();
 
-                // Redirect based on role
                 const role = data.user.role ? data.user.role.toLowerCase().trim() : "";
-
                 setTimeout(() => {
                     if (role === "student") router.push("/student");
                     else if (role === "sme") router.push("/sme");
@@ -63,35 +61,113 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle>Sign In</DialogTitle>
-            <DialogContent className="space-y-4 pt-4">
-                <Tabs value={roleTab} onChange={(_, v) => setRoleTab(v)} variant="fullWidth" className="mb-4">
-                    <Tab label="Student" />
-                    <Tab label="SME" />
-                    <Tab label="Company" />
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="xs"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    borderRadius: "16px",
+                    overflow: "hidden",
+                },
+            }}
+        >
+            {/* Branded Header */}
+            <Box
+                sx={{
+                    background: "linear-gradient(135deg, #1e1b4b, #312e81, #3730a3)",
+                    p: { xs: 3, sm: 4 },
+                    textAlign: "center",
+                    position: "relative",
+                }}
+            >
+                <IconButton
+                    onClick={onClose}
+                    sx={{
+                        position: "absolute",
+                        top: 8,
+                        right: 8,
+                        color: "rgba(255,255,255,0.6)",
+                        "&:hover": { color: "white" },
+                    }}
+                >
+                    <Close />
+                </IconButton>
+                <Typography variant="h5" sx={{ color: "white", fontWeight: 800, mb: 0.5 }}>
+                    Welcome Back
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#a5b4fc" }}>
+                    Sign in to your SkillNet account
+                </Typography>
+            </Box>
+
+            <DialogContent sx={{ p: { xs: 2.5, sm: 4 }, pt: { xs: 2, sm: 3 } }}>
+                <Tabs
+                    value={roleTab}
+                    onChange={(_, v) => setRoleTab(v)}
+                    variant="fullWidth"
+                    sx={{
+                        mb: 3,
+                        "& .MuiTab-root": {
+                            minHeight: 48,
+                            fontWeight: 600,
+                            fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                        },
+                    }}
+                >
+                    <Tab icon={<School sx={{ fontSize: 18 }} />} iconPosition="start" label="Student" />
+                    <Tab icon={<Rocket sx={{ fontSize: 18 }} />} iconPosition="start" label="SME" />
+                    <Tab icon={<Business sx={{ fontSize: 18 }} />} iconPosition="start" label="Company" />
                 </Tabs>
-                <TextField
-                    label="Email"
-                    type="email"
-                    fullWidth
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    margin="dense"
-                />
-                <TextField
-                    label="Password"
-                    type="password"
-                    fullWidth
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    margin="dense"
-                />
+
+                <Stack spacing={2.5}>
+                    <TextField
+                        label="Email"
+                        type="email"
+                        fullWidth
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        variant="outlined"
+                        size="medium"
+                    />
+                    <TextField
+                        label="Password"
+                        type="password"
+                        fullWidth
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        variant="outlined"
+                        size="medium"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSignIn();
+                        }}
+                    />
+                    <Button
+                        variant="contained"
+                        onClick={handleSignIn}
+                        fullWidth
+                        disableElevation
+                        sx={{
+                            py: 1.5,
+                            fontWeight: 700,
+                            fontSize: "1rem",
+                            borderRadius: "10px",
+                            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                            "&:hover": { background: "linear-gradient(135deg, #4f46e5, #7c3aed)" },
+                        }}
+                    >
+                        Sign In
+                    </Button>
+                </Stack>
+
+                <Typography
+                    variant="body2"
+                    sx={{ textAlign: "center", mt: 3, color: "#64748b" }}
+                >
+                    Don&apos;t have an account? Contact your administrator to get started.
+                </Typography>
             </DialogContent>
-            <DialogActions className="px-6 pb-6">
-                <Button onClick={onClose} color="inherit">Cancel</Button>
-                <Button variant="contained" onClick={handleSignIn} disableElevation>Sign In</Button>
-            </DialogActions>
         </Dialog>
     );
 }

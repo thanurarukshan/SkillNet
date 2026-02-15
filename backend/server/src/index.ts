@@ -1675,9 +1675,9 @@ app.get("/api/getTeamRecommendations", async (req: Request, res: Response) => {
 
     const verifiedSkills = skillsRow[0].verified_skills.join(" ");
 
-    // Validate ML service availability
+    // Call ML API for team recommendations
     const mlApiUrl = process.env.ML_API_URL || "http://localhost:5002";
-    await fetch(`${mlApiUrl}/ml/recommend`, {
+    const mlResponse = await fetch(`${mlApiUrl}/ml/recommend`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1687,43 +1687,22 @@ app.get("/api/getTeamRecommendations", async (req: Request, res: Response) => {
       })
     });
 
-    // Process recommendations
-    const userSkills = skillsRow[0].verified_skills.map((s: string) => s.toLowerCase());
-    const [teams]: any = await pool.query(
-      "SELECT t.*, a.name as leader_name FROM teams t JOIN auth a ON t.team_leader_id = a.id ORDER BY t.created_at DESC LIMIT 50"
-    );
+    if (!mlResponse.ok) {
+      console.error("ML API returned error:", mlResponse.status);
+      return res.json({
+        student_skills: verifiedSkills,
+        recommendations: [],
+        total_evaluated: 0,
+        message: "ML service returned an error. Please try again later."
+      });
+    }
 
-    const processed = teams.map((t: any) => {
-      let teamSkills: string[] = [];
-      if (typeof t.t_skills_req === 'string') {
-        try {
-          teamSkills = JSON.parse(t.t_skills_req);
-        } catch {
-          teamSkills = t.t_skills_req.split(',').map((s: string) => s.trim());
-        }
-      } else if (Array.isArray(t.t_skills_req)) {
-        teamSkills = t.t_skills_req;
-      }
-
-      const tSkills = teamSkills.map(s => s.toLowerCase());
-      const overlaps = userSkills.filter((us: string) =>
-        tSkills.some(ts => ts.includes(us) || us.includes(ts))
-      ).length;
-
-      return {
-        ...t,
-        similarity_score: overlaps / Math.max(tSkills.length, userSkills.length),
-        _c: overlaps
-      };
-    }).filter((t: any) => t._c > 0)
-      .sort((a: any, b: any) => b.similarity_score - a.similarity_score)
-      .slice(0, 5)
-      .map(({ _c, ...rest }: any) => rest);
+    const mlData = await mlResponse.json();
 
     res.json({
       student_skills: verifiedSkills,
-      recommendations: processed,
-      total_evaluated: teams.length
+      recommendations: mlData.recommendations || [],
+      total_evaluated: mlData.total_teams_evaluated || 0
     });
   } catch (err) {
     console.error("GetTeamRecommendations Error:", err);
@@ -2062,53 +2041,30 @@ app.get("/api/projects/:id/recommendations", async (req: Request, res: Response)
     }
     const skillsString = projectSkills.join(" ");
 
-    // Validate ML API availability
+    // Call ML API for project-team matching
     const mlApiUrl = process.env.ML_API_URL_PROJECT || "http://localhost:5003";
-    await fetch(`${mlApiUrl}/ml/recommend`, {
+    const mlResponse = await fetch(`${mlApiUrl}/ml/recommend`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ skills: skillsString, top_n: 5 })
     });
 
-    // Use keyword matching for recommendations
-    const [teams]: any = await pool.query(
-      `SELECT t.*, a.name as leader_name FROM teams t
-       JOIN auth a ON t.team_leader_id = a.id
-       ORDER BY t.created_at DESC LIMIT 50`
-    );
+    if (!mlResponse.ok) {
+      console.error("ML API (Project) returned error:", mlResponse.status);
+      return res.json({
+        project_skills: skillsString,
+        recommendations: [],
+        total_evaluated: 0,
+        message: "ML service returned an error. Please try again later."
+      });
+    }
 
-    const userSkills = projectSkills.map((s: string) => s.toLowerCase());
-    const processed = teams.map((t: any) => {
-      let teamSkills: string[] = [];
-      if (typeof t.t_skills_req === 'string') {
-        try {
-          teamSkills = JSON.parse(t.t_skills_req);
-        } catch {
-          teamSkills = t.t_skills_req.split(',').map((s: string) => s.trim());
-        }
-      } else if (Array.isArray(t.t_skills_req)) {
-        teamSkills = t.t_skills_req;
-      }
-
-      const tSkills = teamSkills.map(s => s.toLowerCase());
-      const overlaps = userSkills.filter((us: string) =>
-        tSkills.some(ts => ts.includes(us) || us.includes(ts))
-      ).length;
-
-      return {
-        ...t,
-        similarity_score: overlaps / Math.max(tSkills.length, userSkills.length),
-        _c: overlaps
-      };
-    }).filter((t: any) => t._c > 0)
-      .sort((a: any, b: any) => b.similarity_score - a.similarity_score)
-      .slice(0, 5)
-      .map(({ _c, ...rest }: any) => rest);
+    const mlData = await mlResponse.json();
 
     res.json({
       project_skills: skillsString,
-      recommendations: processed,
-      total_evaluated: teams.length
+      recommendations: mlData.recommendations || [],
+      total_evaluated: mlData.total_teams_evaluated || 0
     });
   } catch (err) {
     console.error("Get Recommendations Error:", err);

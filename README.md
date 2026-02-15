@@ -76,7 +76,7 @@ All API requests from the frontend go through the **API Gateway** (port 5000), w
 | Frontend        | Next.js 15, React 19, Material-UI 7, TypeScript         |
 | API Gateway     | Node.js, Express 5, TypeScript, Axios                   |
 | Backend Server  | Node.js, Express 5, TypeScript, MySQL2, JWT, bcrypt     |
-| ML Models       | Python 3, Flask, Scikit-learn, Pandas, MySQL Connector   |
+| ML Models       | Python 3, Flask, Gensim (FastText), Scikit-learn, NumPy, MySQL Connector |
 | Database        | MySQL 8.0                                               |
 
 ---
@@ -96,10 +96,17 @@ SkillNet/
 │       ├── src/index.ts       # Gateway proxy routes
 │       └── .env               # Gateway configuration
 ├── models/
-│   ├── teamRecommender/       # Team recommendation ML model (port 5002)
-│   ├── projectMatcher/        # Project matching ML model (port 5003)
-│   ├── recruiterEngine/       # Recruiter engine ML model (port 5004)
-│   └── skillVerifier/         # Skill verification (placeholder)
+│   ├── teamRecommenderNew/    # FastText team recommendation ML model (port 5002)
+│   │   ├── generate_dataset.py  # Corpus generator (~12,500 skill sentences)
+│   │   ├── train_model.py       # FastText training script
+│   │   ├── api/app.py           # Flask API
+│   │   └── model/               # Trained FastText model artifacts
+│   ├── projectMatcherNew/     # FastText project matching ML model (port 5003)
+│   │   ├── generate_dataset.py  # Corpus generator (~12,600 skill sentences)
+│   │   ├── train_model.py       # FastText training script
+│   │   ├── api/app.py           # Flask API
+│   │   └── model/               # Trained FastText model artifacts
+│   └── recruiterEngine/       # Recruiter engine ML model (port 5004)
 ├── db/                        # Database dumps and migration scripts
 │   ├── skillnet_full_dump.sql # Complete database dump (latest)
 │   └── migration_*.sql        # Incremental migration scripts
@@ -112,22 +119,43 @@ SkillNet/
 
 SkillNet uses three machine learning microservices, each running as an independent Flask API.
 
-### 1. Team Recommender (Port 5002)
+### 1. Team Recommender — FastText (Port 5002)
 
-**Purpose:** Recommends SME teams to students based on skill similarity using TF-IDF vectorization and cosine similarity.
+**Purpose:** Recommends SME teams to students based on skill similarity using **custom-trained FastText word embeddings** and cosine similarity.
 
 **How it works:**
-- Takes a student's skills as input
-- Fetches all teams from the database
-- Uses a pre-trained TF-IDF vectorizer to convert skills to vectors
-- Computes cosine similarity between the student's skill vector and each team's required skills
-- Returns top-N teams ranked by similarity score
+1. A custom corpus of ~12,500 tech skill sentences is generated using `generate_dataset.py` (covers 120+ skills across 15 categories)
+2. A FastText model is trained from scratch using `gensim` with character-level n-gram embeddings (`train_model.py`)
+3. When a student requests recommendations, the API:
+   - Takes the student's skills as input
+   - Fetches all teams and their required skills from the database
+   - Converts each skill into a FastText vector and averages them to get a "skill profile" vector
+   - Computes **cosine similarity** between the student's skill vector and each team's skill vector
+   - Returns top-N teams ranked by similarity score
 
-**Start the model:**
+**Why FastText over TF-IDF:**
+- **Semantic understanding** — Knows that "Django" relates to "Python", "React" to "Angular"
+- **Handles unseen words** — Uses subword (character n-gram) decomposition, so any new skill keyword works without retraining
+- **Trained from scratch** — Custom corpus ensures domain-specific skill relationships are captured
+
+**Model training:**
 ```bash
-cd models/teamRecommender
+cd models/teamRecommenderNew
 pip install -r requirements.txt
+
+# Step 1: Generate training corpus
+python generate_dataset.py
+
+# Step 2: Train FastText model
+python train_model.py
+# Output: model/fasttext_skills.model
+```
+
+**Start the API:**
+```bash
+cd models/teamRecommenderNew
 python api/app.py
+# Runs on port 5002
 ```
 
 **Test with curl:**
@@ -135,7 +163,7 @@ python api/app.py
 # Health check
 curl http://localhost:5002/
 
-# Get team recommendations for a student with specific skills
+# Get team recommendations for a student
 curl -X POST http://localhost:5002/ml/recommend \
   -H "Content-Type: application/json" \
   -d '{
@@ -154,7 +182,8 @@ curl -X POST http://localhost:5002/ml/recommend \
       "t_id": 1,
       "t_name": "AI Research Team",
       "t_skills_req": "Python, Machine Learning, TensorFlow",
-      "similarity_score": 0.85
+      "similarity_score": 0.92,
+      "leader_name": "John Doe"
     }
   ],
   "total_teams_evaluated": 5,
@@ -164,21 +193,37 @@ curl -X POST http://localhost:5002/ml/recommend \
 
 ---
 
-### 2. Project Matcher (Port 5003)
+### 2. Project Matcher — FastText (Port 5003)
 
-**Purpose:** Matches teams to projects by comparing project skill requirements against team capabilities using TF-IDF vectorization and cosine similarity.
+**Purpose:** Matches teams to projects by comparing project skill requirements against team capabilities using **custom-trained FastText word embeddings** and cosine similarity.
 
 **How it works:**
-- Takes project skill requirements as input
-- Fetches all teams from the database
-- Uses a pre-trained TF-IDF vectorizer to compute similarity scores
-- Returns top-N matching teams ranked by relevance
+1. A custom corpus of ~12,600 tech skill sentences is generated with project-matching focused templates
+2. A FastText model is trained from scratch, same architecture as Team Recommender
+3. When matching is requested, the API:
+   - Takes project skill requirements as input
+   - Fetches all teams from the database
+   - Computes cosine similarity between project skills vector and each team's skills vector
+   - Returns top-N matching teams ranked by relevance
 
-**Start the model:**
+**Model training:**
 ```bash
-cd models/projectMatcher
+cd models/projectMatcherNew
 pip install -r requirements.txt
+
+# Step 1: Generate training corpus
+python generate_dataset.py
+
+# Step 2: Train FastText model
+python train_model.py
+# Output: model/fasttext_skills.model
+```
+
+**Start the API:**
+```bash
+cd models/projectMatcherNew
 python api/app.py
+# Runs on port 5003
 ```
 
 **Test with curl:**
@@ -205,7 +250,8 @@ curl -X POST http://localhost:5003/ml/recommend \
       "t_id": 2,
       "t_name": "Full Stack Team",
       "t_skills_req": "React, Node.js, Express, PostgreSQL",
-      "similarity_score": 0.78
+      "similarity_score": 0.85,
+      "leader_name": "Jane Smith"
     }
   ],
   "total_teams_evaluated": 5,
@@ -272,13 +318,40 @@ curl -X POST http://localhost:5004/predict \
 
 ---
 
+### FastText Model Architecture
+
+```
+Training Pipeline:
+┌─────────────────┐     ┌─────────────────┐     ┌──────────────────┐
+│  generate_       │────▶│  train_model.py  │────▶│  fasttext_skills │
+│  dataset.py      │     │  (gensim)        │     │  .model          │
+│  (~12,500 sents) │     │  FastText(sg=1)  │     │  (word vectors)  │
+└─────────────────┘     └─────────────────┘     └──────────────────┘
+
+Inference Pipeline:
+┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│  Input Skills │────▶│  FastText Vector  │────▶│  Cosine Similarity│
+│  "react, node"│     │  Averaging        │     │  vs Team Vectors  │
+└──────────────┘     └──────────────────┘     └──────────────────┘
+```
+
+| Parameter       | Value                                              |
+|-----------------|----------------------------------------------------|
+| Algorithm       | FastText (Skip-gram with character n-grams)         |
+| Vector Size     | 100 dimensions                                     |
+| Window Size     | 5                                                  |
+| Min Word Count  | 1                                                  |
+| Training Epochs | 50                                                 |
+| N-gram Range    | 3–6 characters                                     |
+| Corpus Size     | ~12,500 sentences (Team) / ~12,600 sentences (Project) |
+
 ### ML Model Ports Summary
 
-| Model             | Port | Endpoint          | Method |
-|-------------------|------|--------------------|--------|
-| Team Recommender  | 5002 | `/ml/recommend`   | POST   |
-| Project Matcher   | 5003 | `/ml/recommend`   | POST   |
-| Recruiter Engine  | 5004 | `/predict`        | POST   |
+| Model             | Port | Endpoint          | Method | Technology |
+|-------------------|------|--------------------|--------|------------|
+| Team Recommender  | 5002 | `/ml/recommend`   | POST   | FastText   |
+| Project Matcher   | 5003 | `/ml/recommend`   | POST   | FastText   |
+| Recruiter Engine  | 5004 | `/predict`        | POST   | Scikit-learn |
 
 ---
 
@@ -399,10 +472,10 @@ cd /opt/SkillNet/backend/apiGateway
 npm install
 
 # ML Model dependencies (each in its own virtual environment)
-cd /opt/SkillNet/models/teamRecommender
+cd /opt/SkillNet/models/teamRecommenderNew
 pip3 install -r requirements.txt
 
-cd /opt/SkillNet/models/projectMatcher
+cd /opt/SkillNet/models/projectMatcherNew
 pip3 install -r requirements.txt
 
 cd /opt/SkillNet/models/recruiterEngine
@@ -441,12 +514,12 @@ npm run dev
 cd /opt/SkillNet/frontend
 npm run dev
 
-# Terminal 4 — Team Recommender ML Model
-cd /opt/SkillNet/models/teamRecommender
+# Terminal 4 — Team Recommender ML Model (FastText)
+cd /opt/SkillNet/models/teamRecommenderNew
 python3 api/app.py
 
-# Terminal 5 — Project Matcher ML Model
-cd /opt/SkillNet/models/projectMatcher
+# Terminal 5 — Project Matcher ML Model (FastText)
+cd /opt/SkillNet/models/projectMatcherNew
 python3 api/app.py
 
 # Terminal 6 — Recruiter Engine ML Model

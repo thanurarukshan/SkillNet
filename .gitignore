@@ -57,3 +57,14 @@ models/teamRecommender/__pycache__/
 models/teamRecommender/api/__pycache__/
 #models/teamRecommender/model/*.pkl
 models/teamRecommender/dataset/*.csv
+
+# --- New FastText ML Models ---
+models/teamRecommenderNew/model/
+models/teamRecommenderNew/dataset/
+models/teamRecommenderNew/__pycache__/
+models/teamRecommenderNew/api/__pycache__/
+
+models/projectMatcherNew/model/
+models/projectMatcherNew/dataset/
+models/projectMatcherNew/__pycache__/
+models/projectMatcherNew/api/__pycache__/
