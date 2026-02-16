@@ -120,7 +120,7 @@ app.put("/api/editProfile", verifyToken, async (req: Request, res: Response) => 
   try {
     const payload = req.body;
     const response = await axios.put(`${BACKEND_BASE_URL}/api/editProfile`, payload, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -150,7 +150,7 @@ app.put("/api/editCompanyProfile", verifyToken, async (req: Request, res) => {
   try {
     const payload = req.body;
     const response = await axios.put(`${BACKEND_BASE_URL}/api/editCompanyProfile`, payload, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -164,7 +164,7 @@ app.post("/api/addJob", verifyToken, async (req: Request, res: Response) => {
   try {
     const payload = req.body;
     const response = await axios.post(`${BACKEND_BASE_URL}/api/addJob`, payload, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -181,7 +181,7 @@ app.post("/api/addJob", verifyToken, async (req: Request, res: Response) => {
 app.post("/api/job-roles", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${BACKEND_BASE_URL}/api/job-roles`, req.body, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.status(response.status).json(response.data);
   } catch (err: any) {
@@ -194,7 +194,7 @@ app.post("/api/job-roles", verifyToken, async (req: Request, res: Response) => {
 app.get("/api/job-roles", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/job-roles`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -207,7 +207,7 @@ app.get("/api/job-roles", verifyToken, async (req: Request, res: Response) => {
 app.get("/api/job-roles/hire-statuses", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/job-roles/hire-statuses`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -220,7 +220,7 @@ app.get("/api/job-roles/hire-statuses", verifyToken, async (req: Request, res: R
 app.get("/api/job-roles/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/job-roles/${req.params.id}`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -233,7 +233,7 @@ app.get("/api/job-roles/:id", verifyToken, async (req: Request, res: Response) =
 app.put("/api/job-roles/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.put(`${BACKEND_BASE_URL}/api/job-roles/${req.params.id}`, req.body, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -246,7 +246,7 @@ app.put("/api/job-roles/:id", verifyToken, async (req: Request, res: Response) =
 app.delete("/api/job-roles/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.delete(`${BACKEND_BASE_URL}/api/job-roles/${req.params.id}`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -263,7 +263,7 @@ app.delete("/api/job-roles/:id", verifyToken, async (req: Request, res: Response
 app.get("/api/job-roles/:id/recommendations", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/job-roles/${req.params.id}/recommendations`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -276,7 +276,7 @@ app.get("/api/job-roles/:id/recommendations", verifyToken, async (req: Request, 
 app.post("/api/job-roles/:id/send-hire-request", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${BACKEND_BASE_URL}/api/job-roles/${req.params.id}/send-hire-request`, req.body, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.status(response.status).json(response.data);
   } catch (err: any) {
@@ -289,7 +289,7 @@ app.post("/api/job-roles/:id/send-hire-request", verifyToken, async (req: Reques
 app.get("/api/student/hire-requests", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/student/hire-requests`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -302,7 +302,7 @@ app.get("/api/student/hire-requests", verifyToken, async (req: Request, res: Res
 app.post("/api/student/hire-requests/:id/accept", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${BACKEND_BASE_URL}/api/student/hire-requests/${req.params.id}/accept`, {}, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -315,7 +315,7 @@ app.post("/api/student/hire-requests/:id/accept", verifyToken, async (req: Reque
 app.post("/api/student/hire-requests/:id/reject", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${BACKEND_BASE_URL}/api/student/hire-requests/${req.params.id}/reject`, {}, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -346,7 +346,7 @@ app.put("/api/changePassword", verifyToken, async (req: Request, res: Response) 
   try {
     const payload = req.body;
     const response = await axios.put(`${BACKEND_BASE_URL}/api/changePassword`, payload, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -359,7 +359,7 @@ app.put("/api/changePassword", verifyToken, async (req: Request, res: Response) 
 app.delete("/api/deleteUser", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.delete(`${BACKEND_BASE_URL}/api/deleteUser`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -376,7 +376,7 @@ app.post("/api/addProject", verifyToken, async (req: Request, res: Response) => 
     const payload = req.body;
     // Changed .put to .post to match the Backend Server
     const response = await axios.post(`${BACKEND_BASE_URL}/api/addProject`, payload, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -393,7 +393,7 @@ app.post("/api/addProject", verifyToken, async (req: Request, res: Response) => 
 app.get("/api/getStudentSkills", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/getStudentSkills`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -405,7 +405,7 @@ app.get("/api/getStudentSkills", verifyToken, async (req: Request, res: Response
 app.post("/api/addSkill", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${BACKEND_BASE_URL}/api/addSkill`, req.body, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -417,7 +417,7 @@ app.post("/api/addSkill", verifyToken, async (req: Request, res: Response) => {
 app.put("/api/verifySkill", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.put(`${BACKEND_BASE_URL}/api/verifySkill`, req.body, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -429,7 +429,7 @@ app.put("/api/verifySkill", verifyToken, async (req: Request, res: Response) => 
 app.delete("/api/removeSkill", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.delete(`${BACKEND_BASE_URL}/api/removeSkill`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
       data: req.body
     });
     res.json(response.data);
@@ -446,7 +446,7 @@ app.delete("/api/removeSkill", verifyToken, async (req: Request, res: Response) 
 app.post("/api/createTeam", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${BACKEND_BASE_URL}/api/createTeam`, req.body, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -458,7 +458,7 @@ app.post("/api/createTeam", verifyToken, async (req: Request, res: Response) => 
 app.get("/api/getMyTeams", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/getMyTeams`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -470,7 +470,7 @@ app.get("/api/getMyTeams", verifyToken, async (req: Request, res: Response) => {
 app.get("/api/getTeamDetails/:teamId", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/getTeamDetails/${req.params.teamId}`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -482,7 +482,7 @@ app.get("/api/getTeamDetails/:teamId", verifyToken, async (req: Request, res: Re
 app.put("/api/updateTeam/:teamId", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.put(`${BACKEND_BASE_URL}/api/updateTeam/${req.params.teamId}`, req.body, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -494,7 +494,7 @@ app.put("/api/updateTeam/:teamId", verifyToken, async (req: Request, res: Respon
 app.delete("/api/deleteTeam/:teamId", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.delete(`${BACKEND_BASE_URL}/api/deleteTeam/${req.params.teamId}`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -508,7 +508,7 @@ app.put("/api/removeMember/:teamId/:studentId", verifyToken, async (req: Request
     const response = await axios.put(
       `${BACKEND_BASE_URL}/api/removeMember/${req.params.teamId}/${req.params.studentId}`,
       {},
-      { headers: { Authorization: req.headers.authorization! } }
+      { headers: { Authorization: (req.headers.authorization || "") } }
     );
     res.json(response.data);
   } catch (err: any) {
@@ -522,7 +522,7 @@ app.post("/api/leaveTeam/:teamId", verifyToken, async (req: Request, res: Respon
     const response = await axios.post(
       `${BACKEND_BASE_URL}/api/leaveTeam/${req.params.teamId}`,
       {},
-      { headers: { Authorization: req.headers.authorization! } }
+      { headers: { Authorization: (req.headers.authorization || "") } }
     );
     res.json(response.data);
   } catch (err: any) {
@@ -538,7 +538,7 @@ app.post("/api/leaveTeam/:teamId", verifyToken, async (req: Request, res: Respon
 app.get("/api/searchTeams", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/searchTeams`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
       params: req.query
     });
     res.json(response.data);
@@ -553,7 +553,7 @@ app.post("/api/requestJoinTeam/:teamId", verifyToken, async (req: Request, res: 
     const response = await axios.post(
       `${BACKEND_BASE_URL}/api/requestJoinTeam/${req.params.teamId}`,
       {},
-      { headers: { Authorization: req.headers.authorization! } }
+      { headers: { Authorization: (req.headers.authorization || "") } }
     );
     res.json(response.data);
   } catch (err: any) {
@@ -565,7 +565,7 @@ app.post("/api/requestJoinTeam/:teamId", verifyToken, async (req: Request, res: 
 app.get("/api/getTeamRequests/:teamId", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/getTeamRequests/${req.params.teamId}`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -579,7 +579,7 @@ app.put("/api/approveRequest/:requestId", verifyToken, async (req: Request, res:
     const response = await axios.put(
       `${BACKEND_BASE_URL}/api/approveRequest/${req.params.requestId}`,
       {},
-      { headers: { Authorization: req.headers.authorization! } }
+      { headers: { Authorization: (req.headers.authorization || "") } }
     );
     res.json(response.data);
   } catch (err: any) {
@@ -593,7 +593,7 @@ app.put("/api/rejectRequest/:requestId", verifyToken, async (req: Request, res: 
     const response = await axios.put(
       `${BACKEND_BASE_URL}/api/rejectRequest/${req.params.requestId}`,
       {},
-      { headers: { Authorization: req.headers.authorization! } }
+      { headers: { Authorization: (req.headers.authorization || "") } }
     );
     res.json(response.data);
   } catch (err: any) {
@@ -609,7 +609,7 @@ app.put("/api/rejectRequest/:requestId", verifyToken, async (req: Request, res: 
 app.get("/api/getTeamRecommendations", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/getTeamRecommendations`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -625,7 +625,7 @@ app.get("/api/getTeamRecommendations", verifyToken, async (req: Request, res: Re
 app.get("/api/sme/profile", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/sme/profile`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -637,7 +637,7 @@ app.get("/api/sme/profile", verifyToken, async (req: Request, res: Response) => 
 app.put("/api/sme/profile", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.put(`${BACKEND_BASE_URL}/api/sme/profile`, req.body, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -649,7 +649,7 @@ app.put("/api/sme/profile", verifyToken, async (req: Request, res: Response) => 
 app.delete("/api/sme/profile", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.delete(`${BACKEND_BASE_URL}/api/sme/profile`, {
-      headers: { Authorization: req.headers.authorization! },
+      headers: { Authorization: (req.headers.authorization || "") },
     });
     res.json(response.data);
   } catch (err: any) {
@@ -666,7 +666,7 @@ app.delete("/api/sme/profile", verifyToken, async (req: Request, res: Response) 
 app.post("/api/projects", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${BACKEND_BASE_URL}/api/projects`, req.body, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -679,7 +679,7 @@ app.post("/api/projects", verifyToken, async (req: Request, res: Response) => {
 app.get("/api/projects", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/projects`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -692,7 +692,7 @@ app.get("/api/projects", verifyToken, async (req: Request, res: Response) => {
 app.get("/api/projects/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/projects/${req.params.id}`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -705,7 +705,7 @@ app.get("/api/projects/:id", verifyToken, async (req: Request, res: Response) =>
 app.put("/api/projects/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.put(`${BACKEND_BASE_URL}/api/projects/${req.params.id}`, req.body, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -718,7 +718,7 @@ app.put("/api/projects/:id", verifyToken, async (req: Request, res: Response) =>
 app.delete("/api/projects/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.delete(`${BACKEND_BASE_URL}/api/projects/${req.params.id}`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -731,7 +731,7 @@ app.delete("/api/projects/:id", verifyToken, async (req: Request, res: Response)
 app.get("/api/projects/:id/recommendations", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/projects/${req.params.id}/recommendations`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -744,7 +744,7 @@ app.get("/api/projects/:id/recommendations", verifyToken, async (req: Request, r
 app.post("/api/projects/:id/send-request", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${BACKEND_BASE_URL}/api/projects/${req.params.id}/send-request`, req.body, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -761,7 +761,7 @@ app.post("/api/projects/:id/send-request", verifyToken, async (req: Request, res
 app.get("/api/hiring-requests/project/:id", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/hiring-requests/project/${req.params.id}`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -774,7 +774,7 @@ app.get("/api/hiring-requests/project/:id", verifyToken, async (req: Request, re
 app.get("/api/teams/hiring-requests", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.get(`${BACKEND_BASE_URL}/api/teams/hiring-requests`, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -787,7 +787,7 @@ app.get("/api/teams/hiring-requests", verifyToken, async (req: Request, res: Res
 app.post("/api/teams/hiring-requests/:id/accept", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${BACKEND_BASE_URL}/api/teams/hiring-requests/${req.params.id}/accept`, {}, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
@@ -800,7 +800,7 @@ app.post("/api/teams/hiring-requests/:id/accept", verifyToken, async (req: Reque
 app.post("/api/teams/hiring-requests/:id/reject", verifyToken, async (req: Request, res: Response) => {
   try {
     const response = await axios.post(`${BACKEND_BASE_URL}/api/teams/hiring-requests/${req.params.id}/reject`, {}, {
-      headers: { Authorization: req.headers.authorization! }
+      headers: { Authorization: (req.headers.authorization || "") }
     });
     res.json(response.data);
   } catch (err: any) {
