@@ -13,6 +13,7 @@ Architecture Diagram: https://drive.google.com/file/d/1hgMgRLeDljPtWSmphWWEkY41e
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
 - [ML Models](#ml-models)
+- [Docker Deployment](#docker-deployment)
 - [Deployment Guide (CentOS / RHEL)](#deployment-guide-centos--rhel)
 - [Database Setup](#database-setup)
 - [Running the Application](#running-the-application)
@@ -355,7 +356,82 @@ Inference Pipeline:
 
 ---
 
-## Deployment Guide (CentOS / RHEL)
+## Docker Deployment
+
+The easiest way to run the full SkillNet application (Frontend, Backend, API Gateway, 3 ML Models, and Database) is using Docker Compose.
+
+### Prerequisites (CentOS / RHEL)
+
+1.  **Install Git:**
+    ```bash
+    sudo dnf install git -y
+    ```
+
+2.  **Install Docker & Docker Compose:**
+    ```bash
+    sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    sudo dnf install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    ```
+
+3.  **Install Python 3 & Pip (Required for Model Generation):**
+    ```bash
+    sudo dnf install python3 python3-pip -y
+    ```
+
+### Quick Start
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/thanura/SkillNet.git
+    cd SkillNet
+    ```
+
+2.  **Generate ML Models (Required for Fresh Deployment):**
+    The large FastText models are not stored in git. You must generate them locally before building the Docker containers.
+
+    ```bash
+    # Install Python dependencies for model generation
+    pip3 install -r models/teamRecommenderNew/requirements.txt
+
+    # Generate & Train Team Recommender Model
+    python3 models/teamRecommenderNew/train_model.py
+
+    # Generate & Train Project Matcher Model
+    python3 models/projectMatcherNew/train_model.py
+    ```
+    *(Note: These scripts automatically generate the training dataset if missing, so no database connection is required.)*
+
+3.  **Start all services:**
+    ```bash
+    docker compose up --build -d
+    ```
+    This will build all Docker images and start the application in the background.
+
+4.  **Access the application:**
+    - **Frontend:** [http://localhost:3000](http://localhost:3000) (or `http://<server-ip>:3000`)
+    - **Backend Server:** [http://localhost:5001](http://localhost:5001)
+    - **API Gateway:** [http://localhost:5000](http://localhost:5000)
+
+### Stops & Cleanup
+
+To stop the containers:
+```bash
+docker compose down
+```
+
+To stop and remove volumes (reset database):
+```bash
+docker compose down -v
+```
+
+### Data Persistence
+The MySQL database data is persisted in a Docker volume named `skillnet-db-data`. The database is automatically initialized with the schema and data from `db/skillnet_full_dump.sql` on the first run.
+
+---
+
+## Deployment Guide (CentOS / RHEL - Manual / Non-Docker)
 
 This guide walks you through deploying SkillNet on a fresh **CentOS 8+** or **RHEL 8+** server.
 

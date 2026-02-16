@@ -22,10 +22,10 @@ print(f"Model loaded. Vocabulary size: {len(model.wv.key_to_index)}")
 
 # MySQL connection config
 db_config = {
-    "host": "localhost",
-    "user": "skillnet",
-    "password": "Skillnet@123",
-    "database": "skillnet"
+    "host": os.environ.get("DB_HOST", "localhost"),
+    "user": os.environ.get("DB_USER", "skillnet"),
+    "password": os.environ.get("DB_PASSWORD", "Skillnet@123"),
+    "database": os.environ.get("DB_NAME", "skillnet")
 }
 
 

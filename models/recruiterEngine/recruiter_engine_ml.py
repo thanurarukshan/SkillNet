@@ -1,16 +1,17 @@
 import mysql.connector
 import json
 import pickle
+import os
 
 with open("model.pkl", "rb") as f:
     model = pickle.load(f)
 
 def get_db_connection():
     return mysql.connector.connect(
-        host="localhost",
-        user="skillnet",
-        password="Skillnet@123",
-        database="skillnet"
+        host=os.environ.get("DB_HOST", "localhost"),
+        user=os.environ.get("DB_USER", "skillnet"),
+        password=os.environ.get("DB_PASSWORD", "Skillnet@123"),
+        database=os.environ.get("DB_NAME", "skillnet")
     )
 
 def extract_features(job_skills, verified, unverified):

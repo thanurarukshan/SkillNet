@@ -11,7 +11,7 @@ const app = express();
 const PORT = 5000;
 
 // Backend server URL
-const BACKEND_BASE_URL = "http://localhost:5001";
+const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || "http://localhost:5001";
 
 // ✅ Allow requests from frontend (support both ports 3000 and 3001)
 app.use(cors({

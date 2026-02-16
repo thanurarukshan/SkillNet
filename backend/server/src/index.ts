@@ -725,7 +725,8 @@ app.get("/api/job-roles/:id/recommendations", async (req: Request, res: Response
 
     // Call recruiter engine ML model
     try {
-      const mlResponse = await fetch("http://localhost:5004/predict", {
+      const recruiterUrl = process.env.RECRUITER_ENGINE_URL || "http://localhost:5004";
+      const mlResponse = await fetch(`${recruiterUrl}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
