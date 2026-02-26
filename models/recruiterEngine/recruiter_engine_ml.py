@@ -14,18 +14,35 @@ def get_db_connection():
         database=os.environ.get("DB_NAME", "skillnet")
     )
 
-def extract_features(job_skills, verified, unverified):
-    # Case-insensitive matching
-    job_skills = set(s.lower().strip() for s in job_skills)
-    verified = set(s.lower().strip() for s in verified)
-    unverified = set(s.lower().strip() for s in unverified)
+def normalize_skill(skill):
+    """Normalize a skill name for fuzzy matching."""
+    s = skill.lower().strip()
+    # Remove common separators and suffixes
+    s = s.replace('.js', 'js').replace('.', '').replace('-', '').replace('_', '').replace(' ', '')
+    return s
 
+def fuzzy_skill_match(job_skills, student_skills):
+    """Count how many job skills are matched by student skills using fuzzy containment."""
+    matched = 0
+    job_normalized = [(s, normalize_skill(s)) for s in job_skills]
+    student_normalized = [normalize_skill(s) for s in student_skills]
+
+    for _, jn in job_normalized:
+        for sn in student_normalized:
+            # Check if either contains the other, or they are equal
+            if jn == sn or jn in sn or sn in jn:
+                matched += 1
+                break
+    return matched
+
+def extract_features(job_skills, verified, unverified):
+    """Extract features using fuzzy/normalized skill matching."""
     total = len(job_skills)
     if total == 0:
         return [0, 0, 0, 0, 0]
 
-    verified_matches = len(job_skills & verified)
-    unverified_matches = len(job_skills & unverified)
+    verified_matches = fuzzy_skill_match(job_skills, verified)
+    unverified_matches = fuzzy_skill_match(job_skills, unverified)
 
     return [
         verified_matches,
@@ -62,7 +79,11 @@ def recruiter_engine_ml(job_input):
         unverified = json.loads(stu["unverified_skills"]) if isinstance(stu["unverified_skills"], str) else (stu["unverified_skills"] or [])
 
         features = extract_features(job_skills, verified, unverified)
-        score = model.predict([features])[0]
+        # Use deterministic scoring based on skill match ratios
+        # features = [verified_matches, unverified_matches, total, verified_ratio, unverified_ratio]
+        verified_ratio = features[3]   # verified_matches / total
+        unverified_ratio = features[4] # unverified_matches / total
+        score = (verified_ratio * 70) + (unverified_ratio * 30)
 
         # Only include students with score > 0
         if score > 0:

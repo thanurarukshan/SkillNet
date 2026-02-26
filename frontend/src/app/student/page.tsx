@@ -27,12 +27,19 @@ import { Add, Groups, Work, CheckCircle, Cancel, AttachMoney, Business } from "@
 import UserMenu from "../../components/UserMenu";
 import { useRouter } from "next/navigation";
 
+const PROJECT_INFO = [
+  { icon: "🎯", title: "AI-Powered Matching", desc: "Our FastText AI models match your skills to the best-fit teams and projects automatically." },
+  { icon: "✅", title: "Skill Verification", desc: "Get your skills verified by SMEs to boost credibility and improve your AI match scores." },
+  { icon: "💼", title: "Direct Job Offers", desc: "Companies discover you based on your skills and send you job offers directly through the platform." },
+];
+
 export default function StudentDashboard() {
   const router = useRouter();
   const [tabIndex, setTabIndex] = useState(0);
   const [openEdit, setOpenEdit] = useState(false);
   const [newSkill, setNewSkill] = useState("");
   const [loading, setLoading] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
   const [verifiedSkills, setVerifiedSkills] = useState<string[]>([]);
   const [unverifiedSkills, setUnverifiedSkills] = useState<string[]>([]);
   const [companyOffers, setCompanyOffers] = useState<any[]>([]);
@@ -56,6 +63,12 @@ export default function StudentDashboard() {
     fetchStudentInfo();
     fetchStudentSkills();
     fetchCompanyOffers();
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 30);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const fetchStudentInfo = async () => {
@@ -296,26 +309,45 @@ export default function StudentDashboard() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
-      {/* HEADER BAR */}
-      <AppBar position="static" sx={{ background: "linear-gradient(135deg,#6366f1,#06b6d4)" }}>
+      {/* HEADER BAR — scroll-aware */}
+      <AppBar
+        position="sticky"
+        elevation={scrolled ? 2 : 0}
+        sx={{
+          background: scrolled ? "linear-gradient(135deg,#6366f1,#06b6d4)" : "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(12px)",
+          transition: "all 0.4s ease",
+          borderBottom: scrolled ? "none" : "1px solid #e2e8f0",
+        }}
+      >
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
-            SkillNet - Student Dashboard
+          <Typography
+            variant="h6"
+            sx={{
+              flexGrow: 1,
+              fontWeight: "bold",
+              color: scrolled ? "white" : "#6366f1",
+              transition: "color 0.4s ease",
+            }}
+          >
+            SkillNet{scrolled ? " - Student Dashboard" : ""}
           </Typography>
-          <Button
-            color="inherit"
-            onClick={() => router.push("/student")}
-            sx={{ mr: 2, fontWeight: "bold" }}
-          >
-            Dashboard
-          </Button>
-          <Button
-            color="inherit"
-            onClick={() => router.push("/student/hiring-requests")}
-            sx={{ mr: 2, fontWeight: "bold" }}
-          >
-            Hiring Requests
-          </Button>
+          <Box sx={{ display: "flex", gap: 1, opacity: scrolled ? 1 : 0, transform: scrolled ? "translateX(0)" : "translateX(20px)", transition: "all 0.4s ease", pointerEvents: scrolled ? "auto" : "none" }}>
+            <Button
+              color="inherit"
+              onClick={() => router.push("/student")}
+              sx={{ fontWeight: "bold", color: "white" }}
+            >
+              Dashboard
+            </Button>
+            <Button
+              color="inherit"
+              onClick={() => router.push("/student/hiring-requests")}
+              sx={{ fontWeight: "bold", color: "white" }}
+            >
+              Hiring Requests
+            </Button>
+          </Box>
           <UserMenu
             userName={studentInfo.name}
             onProfileUpdate={() => setOpenEdit(true)}
@@ -324,8 +356,42 @@ export default function StudentDashboard() {
       </AppBar>
 
       <Box p={4}>
+        {/* PROJECT INFO BANNER */}
+        <Box maxWidth={900} mx="auto" mb={4}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+            {PROJECT_INFO.map((info, idx) => (
+              <Card
+                key={idx}
+                sx={{
+                  flex: 1,
+                  minHeight: 140,
+                  p: 2.5,
+                  borderRadius: 3,
+                  border: "1px solid #e2e8f0",
+                  background: "linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%)",
+                  transition: "all 0.3s ease",
+                  "&:hover": { transform: "translateY(-3px)", boxShadow: 4 },
+                }}
+              >
+                <Typography fontSize={28} mb={1}>{info.icon}</Typography>
+                <Typography variant="subtitle2" fontWeight={700} mb={0.5}>{info.title}</Typography>
+                <Typography variant="body2" color="text.secondary" lineHeight={1.6}>{info.desc}</Typography>
+              </Card>
+            ))}
+          </Stack>
+        </Box>
+
         {/* PROFILE CARD */}
-        <Card sx={{ maxWidth: 900, mx: "auto", mb: 4, p: 3 }}>
+        <Card sx={{
+          maxWidth: 900,
+          mx: "auto",
+          mb: 4,
+          p: 3,
+          borderRadius: 3,
+          borderLeft: "5px solid #6366f1",
+          "&:hover": { boxShadow: 4 },
+          transition: "all 0.3s ease",
+        }}>
           <CardContent>
             <Stack direction="row" spacing={3} alignItems="center">
               <Avatar src="" sx={{ width: 80, height: 80, bgcolor: "#6366f1" }}>
@@ -356,7 +422,7 @@ export default function StudentDashboard() {
         {tabIndex === 0 && (
           <Box>
             {/* Add Skill Section */}
-            <Card sx={{ maxWidth: 900, mx: "auto", mb: 3, p: 3 }}>
+            <Card sx={{ maxWidth: 900, mx: "auto", mb: 3, p: 3, borderRadius: 3, borderLeft: "5px solid #6366f1", minHeight: 100, "&:hover": { boxShadow: 4 }, transition: "all 0.3s ease" }}>
               <Typography variant="h6" mb={2}>
                 Add New Skill
               </Typography>
@@ -379,7 +445,18 @@ export default function StudentDashboard() {
             </Card>
 
             {/* Verified Skills */}
-            <Card sx={{ maxWidth: 900, mx: "auto", mb: 3, p: 3 }}>
+            <Card sx={{
+              maxWidth: 900,
+              mx: "auto",
+              mb: 3,
+              p: 3,
+              borderRadius: 3,
+              borderLeft: "5px solid",
+              borderImage: "linear-gradient(to bottom, #10b981, #06b6d4) 1", // Gradient border
+              minHeight: 100,
+              "&:hover": { boxShadow: 4 },
+              transition: "all 0.3s ease",
+            }}>
               <Typography variant="h6" mb={2} sx={{ display: "flex", alignItems: "center" }}>
                 ✓ Verified Skills
                 <Chip label={verifiedSkills.length} size="small" sx={{ ml: 2 }} color="success" />
@@ -404,7 +481,7 @@ export default function StudentDashboard() {
             </Card>
 
             {/* Unverified Skills */}
-            <Card sx={{ maxWidth: 900, mx: "auto", mb: 3, p: 3 }}>
+            <Card sx={{ maxWidth: 900, mx: "auto", mb: 3, p: 3, borderRadius: 3, borderLeft: "5px solid #f59e0b", minHeight: 100, "&:hover": { boxShadow: 4 }, transition: "all 0.3s ease" }}>
               <Typography variant="h6" mb={2} sx={{ display: "flex", alignItems: "center" }}>
                 ⏳ Unverified Skills
                 <Chip label={unverifiedSkills.length} size="small" sx={{ ml: 2 }} color="warning" />
@@ -482,7 +559,16 @@ export default function StudentDashboard() {
         {/* TEAMS TAB - Navigate to Teams Page */}
         {tabIndex === 1 && (
           <Box textAlign="center">
-            <Card sx={{ maxWidth: 600, mx: "auto", p: 6 }}>
+            <Card sx={{
+              maxWidth: 600,
+              mx: "auto",
+              p: 6,
+              borderRadius: 3,
+              borderLeft: "5px solid #6366f1",
+              minHeight: 280,
+              "&:hover": { boxShadow: 4 },
+              transition: "all 0.3s ease",
+            }}>
               <Groups sx={{ fontSize: 100, color: "#6366f1", mb: 3 }} />
               <Typography variant="h5" fontWeight="bold" mb={2}>
                 Team Management
@@ -522,7 +608,13 @@ export default function StudentDashboard() {
             ) : (
               <Stack spacing={3}>
                 {companyOffers.map((offer) => (
-                  <Card key={offer.chr_id} sx={{ "&:hover": { boxShadow: 4 }, transition: "all 0.2s" }}>
+                  <Card key={offer.chr_id} sx={{
+                    borderLeft: offer.status === "accepted" ? "5px solid #10b981" : offer.status === "rejected" ? "5px solid #ef4444" : "5px solid #f59e0b",
+                    borderRadius: 3,
+                    minHeight: 200,
+                    "&:hover": { boxShadow: 6, transform: "translateY(-2px)" },
+                    transition: "all 0.3s ease",
+                  }}>
                     <CardContent>
                       <Stack spacing={2}>
                         <Stack direction="row" justifyContent="space-between" alignItems="start">

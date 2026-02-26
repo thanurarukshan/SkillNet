@@ -75,6 +75,8 @@ export default function SmeDashboard() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [showAllRecs, setShowAllRecs] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   // Dialog states
   const [openEditProfile, setOpenEditProfile] = useState(false);
@@ -111,6 +113,12 @@ export default function SmeDashboard() {
   useEffect(() => {
     fetchProfile();
     fetchProjects();
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 30);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const fetchProfile = async () => {
@@ -402,12 +410,31 @@ export default function SmeDashboard() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-100">
-      {/* HEADER */}
-      <AppBar position="static" sx={{ background: "linear-gradient(135deg,#7c3aed,#2563eb)" }}>
+      {/* HEADER — scroll-aware */}
+      <AppBar
+        position="sticky"
+        elevation={scrolled ? 2 : 0}
+        sx={{
+          background: scrolled ? "linear-gradient(135deg,#7c3aed,#2563eb)" : "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(12px)",
+          transition: "all 0.4s ease",
+          borderBottom: scrolled ? "none" : "1px solid #e2e8f0",
+        }}
+      >
         <Toolbar>
-          <Business sx={{ mr: 2 }} />
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
-            SkillNet - SME Dashboard
+          <Box sx={{ display: "flex", alignItems: "center", mr: 2, opacity: scrolled ? 1 : 0, transition: "opacity 0.4s ease" }}>
+            <Business sx={{ color: "white" }} />
+          </Box>
+          <Typography
+            variant="h6"
+            sx={{
+              flexGrow: 1,
+              fontWeight: "bold",
+              color: scrolled ? "white" : "#7c3aed",
+              transition: "color 0.4s ease",
+            }}
+          >
+            SkillNet{scrolled ? " - SME Dashboard" : ""}
           </Typography>
           <UserMenu
             userName={profile?.name || ""}
@@ -417,8 +444,46 @@ export default function SmeDashboard() {
       </AppBar>
 
       <Box p={4}>
+        {/* PROJECT INFO BANNER */}
+        <Box maxWidth={1000} mx="auto" mb={4}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+            {[
+              { icon: "🚀", title: "Project Management", desc: "Create and manage projects with specific skill requirements and find the best-fit teams using AI." },
+              { icon: "🧠", title: "AI Team Matching", desc: "Our FastText ML engine finds teams whose skills align with your project requirements using deep embeddings." },
+              { icon: "✅", title: "Skill Verification", desc: "Verify student skills to improve overall match quality and ensure high standards across the platform." },
+            ].map((info, idx) => (
+              <Card
+                key={idx}
+                sx={{
+                  flex: 1,
+                  minHeight: 140,
+                  p: 2.5,
+                  borderRadius: 3,
+                  border: "1px solid #e2e8f0",
+                  background: "linear-gradient(135deg, #faf5ff 0%, #f0f0ff 100%)",
+                  transition: "all 0.3s ease",
+                  "&:hover": { transform: "translateY(-3px)", boxShadow: 4 },
+                }}
+              >
+                <Typography fontSize={28} mb={1}>{info.icon}</Typography>
+                <Typography variant="subtitle2" fontWeight={700} mb={0.5}>{info.title}</Typography>
+                <Typography variant="body2" color="text.secondary" lineHeight={1.6}>{info.desc}</Typography>
+              </Card>
+            ))}
+          </Stack>
+        </Box>
+
         {/* PROFILE CARD */}
-        <Card sx={{ maxWidth: 1000, mx: "auto", mb: 4, p: 3 }}>
+        <Card sx={{
+          maxWidth: 1000,
+          mx: "auto",
+          mb: 4,
+          p: 3,
+          borderRadius: 3,
+          borderLeft: "5px solid #7c3aed",
+          "&:hover": { boxShadow: 4 },
+          transition: "all 0.3s ease",
+        }}>
           <CardContent>
             <Stack direction="row" spacing={3} alignItems="center" justifyContent="space-between">
               <Stack direction="row" spacing={3} alignItems="center">
@@ -487,8 +552,16 @@ export default function SmeDashboard() {
             <Grid container spacing={3}>
               {projects.map((project) => (
                 <Grid item xs={12} md={6} key={project.p_id}>
-                  <Card sx={{ height: "100%", cursor: "pointer", "&:hover": { boxShadow: 4 } }}>
-                    <CardContent>
+                  <Card sx={{
+                    height: "100%",
+                    minHeight: 280,
+                    cursor: "pointer",
+                    borderLeft: project.hired_team_id ? "5px solid #10b981" : "5px solid #7c3aed",
+                    borderRadius: 3,
+                    "&:hover": { boxShadow: 6, transform: "translateY(-3px)" },
+                    transition: "all 0.3s ease",
+                  }}>
+                    <CardContent sx={{ p: 3 }}>
                       <Stack spacing={2}>
                         <Stack direction="row" justifyContent="space-between" alignItems="start">
                           <Box flex={1} onClick={() => openProject(project)}>
@@ -788,54 +861,84 @@ export default function SmeDashboard() {
                       </Box>
                     ) : recommendations.length === 0 ? (
                       <Alert severity="info">No team recommendations available yet.</Alert>
-                    ) : (
-                      <Stack spacing={2}>
-                        {recommendations.map((team) => (
-                          <Card key={team.t_id} variant="outlined">
-                            <CardContent>
-                              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                <Box flex={1}>
-                                  <Typography variant="subtitle1" fontWeight="bold">
-                                    {team.t_name}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    Leader: {team.leader_name}
-                                  </Typography>
-                                  <Box mt={1}>
-                                    <Typography variant="caption">Team Skills:</Typography>
-                                    <Stack direction="row" spacing={0.5} flexWrap="wrap" mt={0.5}>
-                                      {(Array.isArray(team.t_skills_req)
-                                        ? team.t_skills_req
-                                        : typeof team.t_skills_req === "string"
-                                          ? team.t_skills_req.split(",")
-                                          : []
-                                      ).slice(0, 4).map((skill, idx) => (
-                                        <Chip key={idx} label={skill} size="small" variant="outlined" />
-                                      ))}
-                                    </Stack>
+                    ) : (() => {
+                      const filtered = recommendations.filter(t => t.similarity_score >= 0.3);
+                      const displayList = showAllRecs ? filtered : filtered.slice(0, 3);
+                      const hiddenCount = filtered.length - 3;
+                      return (
+                        <Stack spacing={2}>
+                          <Typography variant="body2" color="text.secondary">
+                            {filtered.length} teams with ≥30% match
+                          </Typography>
+                          {displayList.map((team) => (
+                            <Card key={team.t_id} variant="outlined" sx={{
+                              borderLeft: `4px solid ${team.similarity_score > 0.7 ? '#10b981' : '#6366f1'}`,
+                              borderRadius: 2,
+                              "&:hover": { boxShadow: 3 },
+                            }}>
+                              <CardContent>
+                                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                  <Box flex={1}>
+                                    <Typography variant="subtitle1" fontWeight="bold">
+                                      {team.t_name}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                      Leader: {team.leader_name}
+                                    </Typography>
+                                    <Box mt={1}>
+                                      <Typography variant="caption">Team Skills:</Typography>
+                                      <Stack direction="row" spacing={0.5} flexWrap="wrap" mt={0.5}>
+                                        {(Array.isArray(team.t_skills_req)
+                                          ? team.t_skills_req
+                                          : typeof team.t_skills_req === "string"
+                                            ? team.t_skills_req.split(",")
+                                            : []
+                                        ).slice(0, 4).map((skill, idx) => (
+                                          <Chip key={idx} label={typeof skill === 'string' ? skill.replace(/[\[\]"]/g, '').trim() : skill} size="small" variant="outlined" />
+                                        ))}
+                                      </Stack>
+                                    </Box>
                                   </Box>
-                                </Box>
-                                <Stack alignItems="center" spacing={1}>
-                                  <Chip
-                                    label={`${Math.round(team.similarity_score * 100)}% Match`}
-                                    color={team.similarity_score > 0.7 ? "success" : "primary"}
-                                    size="small"
-                                  />
-                                  <Button
-                                    variant="contained"
-                                    size="small"
-                                    startIcon={<Send />}
-                                    onClick={() => openHiringDialog(team)}
-                                  >
-                                    Send Request
-                                  </Button>
+                                  <Stack alignItems="center" spacing={1}>
+                                    <Chip
+                                      label={`${Math.round(team.similarity_score * 100)}% Match`}
+                                      color={team.similarity_score > 0.7 ? "success" : "primary"}
+                                      size="small"
+                                    />
+                                    <Button
+                                      variant="contained"
+                                      size="small"
+                                      startIcon={<Send />}
+                                      onClick={() => openHiringDialog(team)}
+                                    >
+                                      Send Request
+                                    </Button>
+                                  </Stack>
                                 </Stack>
-                              </Stack>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </Stack>
-                    )}
+                              </CardContent>
+                            </Card>
+                          ))}
+                          {!showAllRecs && hiddenCount > 0 && (
+                            <Button
+                              variant="outlined"
+                              onClick={() => setShowAllRecs(true)}
+                              sx={{ alignSelf: "center", borderRadius: 3 }}
+                            >
+                              See More ({hiddenCount} more teams)
+                            </Button>
+                          )}
+                          {showAllRecs && hiddenCount > 0 && (
+                            <Button
+                              variant="text"
+                              onClick={() => setShowAllRecs(false)}
+                              sx={{ alignSelf: "center" }}
+                            >
+                              Show Less
+                            </Button>
+                          )}
+                        </Stack>
+                      );
+                    })()}
                   </Box>
                 </>
               )}

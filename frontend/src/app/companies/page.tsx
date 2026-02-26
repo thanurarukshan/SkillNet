@@ -33,7 +33,6 @@ import {
   Edit,
   Delete,
   Work,
-  Settings,
   Business,
   AttachMoney,
   Person,
@@ -82,7 +81,9 @@ const emptyJobForm = {
 export default function CompanyDashboard() {
   const router = useRouter();
   const [tabIndex, setTabIndex] = useState(0);
+  const [showAllRecs, setShowAllRecs] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
 
   // Profile state
   const [companyInfo, setCompanyInfo] = useState({
@@ -139,6 +140,12 @@ export default function CompanyDashboard() {
     fetchCompanyInfo();
     fetchJobRoles();
     fetchHireStatuses();
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 30);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // ─── API CALLS ──────────────────────────────────────────
@@ -481,12 +488,31 @@ export default function CompanyDashboard() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
-      {/* HEADER */}
-      <AppBar position="static" sx={{ background: "linear-gradient(135deg,#6366f1,#06b6d4)" }}>
+      {/* HEADER — scroll-aware */}
+      <AppBar
+        position="sticky"
+        elevation={scrolled ? 2 : 0}
+        sx={{
+          background: scrolled ? "linear-gradient(135deg,#6366f1,#06b6d4)" : "rgba(255,255,255,0.95)",
+          backdropFilter: "blur(12px)",
+          transition: "all 0.4s ease",
+          borderBottom: scrolled ? "none" : "1px solid #e2e8f0",
+        }}
+      >
         <Toolbar>
-          <Business sx={{ mr: 2 }} />
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
-            SkillNet - Company Dashboard
+          <Box sx={{ display: "flex", alignItems: "center", mr: 2, opacity: scrolled ? 1 : 0, transition: "opacity 0.4s ease" }}>
+            <Business sx={{ color: "white" }} />
+          </Box>
+          <Typography
+            variant="h6"
+            sx={{
+              flexGrow: 1,
+              fontWeight: "bold",
+              color: scrolled ? "white" : "#6366f1",
+              transition: "color 0.4s ease",
+            }}
+          >
+            SkillNet{scrolled ? " - Company Dashboard" : ""}
           </Typography>
           <UserMenu
             userName={companyInfo.name}
@@ -504,8 +530,46 @@ export default function CompanyDashboard() {
       </AppBar>
 
       <Box p={4}>
+        {/* PROJECT INFO BANNER */}
+        <Box maxWidth={1200} mx="auto" mb={4}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+            {[
+              { icon: "🎯", title: "AI Recruiter Engine", desc: "Post job roles and let our ML model rank students by how well their skills match your requirements." },
+              { icon: "📊", title: "Skill-Based Matching", desc: "Our fuzzy matching engine recognizes skill variations like React, ReactJS, and React.js as equivalent." },
+              { icon: "🤝", title: "End-to-End Hiring", desc: "Send offers to top candidates, track acceptance status, and manage your entire hiring pipeline." },
+            ].map((info, idx) => (
+              <Card
+                key={idx}
+                sx={{
+                  flex: 1,
+                  minHeight: 140,
+                  p: 2.5,
+                  borderRadius: 3,
+                  border: "1px solid #e2e8f0",
+                  background: "linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%)",
+                  transition: "all 0.3s ease",
+                  "&:hover": { transform: "translateY(-3px)", boxShadow: 4 },
+                }}
+              >
+                <Typography fontSize={28} mb={1}>{info.icon}</Typography>
+                <Typography variant="subtitle2" fontWeight={700} mb={0.5}>{info.title}</Typography>
+                <Typography variant="body2" color="text.secondary" lineHeight={1.6}>{info.desc}</Typography>
+              </Card>
+            ))}
+          </Stack>
+        </Box>
+
         {/* PROFILE CARD */}
-        <Card sx={{ maxWidth: 1200, mx: "auto", mb: 4, p: 3 }}>
+        <Card sx={{
+          maxWidth: 1200,
+          mx: "auto",
+          mb: 4,
+          p: 3,
+          borderRadius: 3,
+          borderLeft: "5px solid #6366f1",
+          "&:hover": { boxShadow: 4 },
+          transition: "all 0.3s ease",
+        }}>
           <CardContent>
             <Stack direction="row" spacing={3} alignItems="center" justifyContent="space-between">
               <Stack direction="row" spacing={3} alignItems="center">
@@ -550,7 +614,6 @@ export default function CompanyDashboard() {
         <Box maxWidth={1200} mx="auto">
           <Tabs value={tabIndex} onChange={(_, v) => setTabIndex(v)} sx={{ mb: 3 }}>
             <Tab icon={<Work />} iconPosition="start" label={`Job Roles (${jobRoles.length})`} />
-            <Tab icon={<Settings />} iconPosition="start" label="Settings" />
           </Tabs>
 
           {/* ─── JOB ROLES TAB ─── */}
@@ -592,9 +655,12 @@ export default function CompanyDashboard() {
                             cursor: "pointer",
                             border: selectedJob?.jr_id === job.jr_id ? "2px solid #6366f1"
                               : isHired ? "2px solid #10b981" : "1px solid #e5e7eb",
-                            "&:hover": { boxShadow: 4 },
-                            transition: "all 0.2s",
+                            borderLeft: isHired ? "5px solid #10b981" : "5px solid #6366f1",
+                            "&:hover": { boxShadow: 6, transform: "translateY(-2px)" },
+                            transition: "all 0.3s ease",
                             bgcolor: isHired ? "#f0fdf4" : "white",
+                            borderRadius: 3,
+                            minHeight: 180,
                           }}
                           onClick={() => {
                             setSelectedJob(job);
@@ -607,7 +673,7 @@ export default function CompanyDashboard() {
                             }
                           }}
                         >
-                          <CardContent>
+                          <CardContent sx={{ p: 3 }}>
                             <Stack spacing={1.5}>
                               <Stack direction="row" justifyContent="space-between" alignItems="start">
                                 <Box flex={1}>
@@ -815,93 +881,119 @@ export default function CompanyDashboard() {
                           <Alert severity="warning">
                             No matching students found for this role.
                           </Alert>
-                        ) : (
-                          <Stack spacing={2}>
-                            <Typography variant="body2" color="text.secondary">
-                              {recommendations.length} students ranked by skill match
-                            </Typography>
-                            {recommendations.map((student, idx) => (
-                              <Card
-                                key={student.student_id}
-                                sx={{
-                                  border: "1px solid #e5e7eb",
-                                  "&:hover": { boxShadow: 3 },
-                                  cursor: "pointer",
-                                }}
-                                onClick={() => {
-                                  setSelectedStudent(student);
-                                  setOpenStudentDialog(true);
-                                }}
-                              >
-                                <CardContent sx={{ py: 2 }}>
-                                  <Stack direction="row" spacing={2} alignItems="center">
-                                    <Avatar
-                                      sx={{
-                                        width: 44,
-                                        height: 44,
-                                        bgcolor: getScoreColor(student.score),
-                                        fontSize: "1rem",
-                                        fontWeight: "bold",
-                                      }}
-                                    >
-                                      #{idx + 1}
-                                    </Avatar>
-                                    <Box flex={1}>
-                                      <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                        <Typography fontWeight="bold">{student.name}</Typography>
-                                        <Stack direction="row" spacing={1} alignItems="center">
-                                          <Star sx={{ color: getScoreColor(student.score), fontSize: 18 }} />
-                                          <Typography fontWeight="bold" color={getScoreColor(student.score)}>
-                                            {student.score}%
-                                          </Typography>
-                                        </Stack>
-                                      </Stack>
-                                      <Typography variant="caption" color="text.secondary">
-                                        {student.department || "N/A"} • {student.email}
-                                      </Typography>
-                                      <LinearProgress
-                                        variant="determinate"
-                                        value={Math.min(student.score, 100)}
+                        ) : (() => {
+                          const filtered = recommendations.filter(s => s.score >= 30);
+                          const displayList = showAllRecs ? filtered : filtered.slice(0, 3);
+                          const hiddenCount = filtered.length - 3;
+                          return (
+                            <Stack spacing={2}>
+                              <Typography variant="body2" color="text.secondary">
+                                {filtered.length} students with ≥30% match (of {recommendations.length} total)
+                              </Typography>
+                              {displayList.map((student, idx) => (
+                                <Card
+                                  key={student.student_id}
+                                  sx={{
+                                    border: "1px solid #e5e7eb",
+                                    borderLeft: "4px solid " + getScoreColor(student.score),
+                                    "&:hover": { boxShadow: 3 },
+                                    cursor: "pointer",
+                                    borderRadius: 2,
+                                  }}
+                                  onClick={() => {
+                                    setSelectedStudent(student);
+                                    setOpenStudentDialog(true);
+                                  }}
+                                >
+                                  <CardContent sx={{ py: 2 }}>
+                                    <Stack direction="row" spacing={2} alignItems="center">
+                                      <Avatar
                                         sx={{
-                                          mt: 1,
-                                          height: 6,
-                                          borderRadius: 3,
-                                          bgcolor: "#f3f4f6",
-                                          "& .MuiLinearProgress-bar": {
-                                            bgcolor: getScoreColor(student.score),
-                                          },
-                                        }}
-                                      />
-                                      <Stack direction="row" spacing={0.5} flexWrap="wrap" mt={1}>
-                                        {student.verified_skills.slice(0, 4).map((s, i) => (
-                                          <Chip key={i} label={s} size="small" color="success" variant="outlined" sx={{ fontSize: "0.7rem" }} />
-                                        ))}
-                                        {student.unverified_skills.slice(0, 2).map((s, i) => (
-                                          <Chip key={`u${i}`} label={s} size="small" variant="outlined" sx={{ fontSize: "0.7rem" }} />
-                                        ))}
-                                      </Stack>
-                                    </Box>
-                                    {sentRequests.has(`${selectedJob.jr_id}-${student.student_id}`) ? (
-                                      <Chip label="Sent" size="small" color="success" />
-                                    ) : (
-                                      <IconButton
-                                        color="primary"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedStudent(student);
-                                          setHireForm({ message: "", contact_info: "" });
-                                          setOpenHireDialog(true);
+                                          width: 48,
+                                          height: 48,
+                                          bgcolor: getScoreColor(student.score),
+                                          fontSize: "1rem",
+                                          fontWeight: "bold",
                                         }}
                                       >
-                                        <Send />
-                                      </IconButton>
-                                    )}
-                                  </Stack>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </Stack>
-                        )}
+                                        #{idx + 1}
+                                      </Avatar>
+                                      <Box flex={1}>
+                                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                          <Typography fontWeight="bold" fontSize="1.05rem">{student.name}</Typography>
+                                          <Stack direction="row" spacing={1} alignItems="center">
+                                            <Star sx={{ color: getScoreColor(student.score), fontSize: 20 }} />
+                                            <Typography fontWeight="bold" fontSize="1.1rem" color={getScoreColor(student.score)}>
+                                              {student.score}%
+                                            </Typography>
+                                          </Stack>
+                                        </Stack>
+                                        <Typography variant="caption" color="text.secondary">
+                                          {student.department || "N/A"} • {student.email}
+                                        </Typography>
+                                        <LinearProgress
+                                          variant="determinate"
+                                          value={Math.min(student.score, 100)}
+                                          sx={{
+                                            mt: 1,
+                                            height: 8,
+                                            borderRadius: 4,
+                                            bgcolor: "#f3f4f6",
+                                            "& .MuiLinearProgress-bar": {
+                                              bgcolor: getScoreColor(student.score),
+                                              borderRadius: 4,
+                                            },
+                                          }}
+                                        />
+                                        <Stack direction="row" spacing={0.5} flexWrap="wrap" mt={1}>
+                                          {student.verified_skills.slice(0, 4).map((s, i) => (
+                                            <Chip key={i} label={s} size="small" color="success" variant="outlined" sx={{ fontSize: "0.7rem" }} />
+                                          ))}
+                                          {student.unverified_skills.slice(0, 2).map((s, i) => (
+                                            <Chip key={`u${i}`} label={s} size="small" variant="outlined" sx={{ fontSize: "0.7rem" }} />
+                                          ))}
+                                        </Stack>
+                                      </Box>
+                                      {sentRequests.has(`${selectedJob.jr_id}-${student.student_id}`) ? (
+                                        <Chip label="Sent" size="small" color="success" />
+                                      ) : (
+                                        <IconButton
+                                          color="primary"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedStudent(student);
+                                            setHireForm({ message: "", contact_info: "" });
+                                            setOpenHireDialog(true);
+                                          }}
+                                        >
+                                          <Send />
+                                        </IconButton>
+                                      )}
+                                    </Stack>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                              {!showAllRecs && hiddenCount > 0 && (
+                                <Button
+                                  variant="outlined"
+                                  onClick={() => setShowAllRecs(true)}
+                                  sx={{ alignSelf: "center", borderRadius: 3 }}
+                                >
+                                  See More ({hiddenCount} more students)
+                                </Button>
+                              )}
+                              {showAllRecs && hiddenCount > 0 && (
+                                <Button
+                                  variant="text"
+                                  onClick={() => setShowAllRecs(false)}
+                                  sx={{ alignSelf: "center" }}
+                                >
+                                  Show Less
+                                </Button>
+                              )}
+                            </Stack>
+                          );
+                        })()}
                       </>
                     )}
                   </Paper>
@@ -910,54 +1002,7 @@ export default function CompanyDashboard() {
             </Stack>
           )}
 
-          {/* ─── SETTINGS TAB ─── */}
-          {tabIndex === 1 && (
-            <Stack spacing={3}>
-              <Card sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight="bold" mb={2}>
-                  Change Password
-                </Typography>
-                <Stack spacing={2} maxWidth={400}>
-                  <TextField
-                    label="Current Password"
-                    type="password"
-                    fullWidth
-                    value={passwordForm.currentPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                  />
-                  <TextField
-                    label="New Password"
-                    type="password"
-                    fullWidth
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                  />
-                  <TextField
-                    label="Confirm New Password"
-                    type="password"
-                    fullWidth
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                  />
-                  <Button variant="contained" onClick={handleChangePassword} sx={{ alignSelf: "flex-start" }}>
-                    Change Password
-                  </Button>
-                </Stack>
-              </Card>
 
-              <Card sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight="bold" mb={1} color="error">
-                  Danger Zone
-                </Typography>
-                <Typography variant="body2" color="text.secondary" mb={2}>
-                  Deleting your account will permanently remove all your data including job listings.
-                </Typography>
-                <Button variant="outlined" color="error" startIcon={<Delete />} onClick={handleDeleteAccount}>
-                  Delete Account
-                </Button>
-              </Card>
-            </Stack>
-          )}
         </Box>
       </Box>
 
@@ -998,6 +1043,41 @@ export default function CompanyDashboard() {
               value={profileForm.industry}
               onChange={(e) => setProfileForm({ ...profileForm, industry: e.target.value })}
             />
+            <Divider sx={{ my: 1 }} />
+            <Typography variant="subtitle2" fontWeight="bold" color="text.secondary">
+              Change Password
+            </Typography>
+            <TextField
+              label="Current Password"
+              type="password"
+              fullWidth
+              value={passwordForm.currentPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+            />
+            <TextField
+              label="New Password"
+              type="password"
+              fullWidth
+              value={passwordForm.newPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+            />
+            <TextField
+              label="Confirm New Password"
+              type="password"
+              fullWidth
+              value={passwordForm.confirmPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+            />
+            <Button variant="outlined" onClick={handleChangePassword} sx={{ alignSelf: "flex-start" }}>
+              Change Password
+            </Button>
+            <Divider sx={{ my: 1 }} />
+            <Typography variant="subtitle2" fontWeight="bold" color="error">
+              Danger Zone
+            </Typography>
+            <Button variant="outlined" color="error" size="small" startIcon={<Delete />} onClick={handleDeleteAccount}>
+              Delete Account
+            </Button>
           </Stack>
         </DialogContent>
         <DialogActions>

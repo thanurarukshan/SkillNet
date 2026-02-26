@@ -13,17 +13,33 @@ def get_db_connection():
         database="skillnet"
     )
 
-def extract_features(job_skills, verified, unverified):
-    job_skills = set(job_skills)
-    verified = set(verified)
-    unverified = set(unverified)
+def normalize_skill(skill):
+    """Normalize a skill name for fuzzy matching."""
+    s = skill.lower().strip()
+    s = s.replace('.js', 'js').replace('.', '').replace('-', '').replace('_', '').replace(' ', '')
+    return s
 
+def fuzzy_skill_match(job_skills, student_skills):
+    """Count how many job skills are matched by student skills using fuzzy containment."""
+    matched = 0
+    job_normalized = [(s, normalize_skill(s)) for s in job_skills]
+    student_normalized = [normalize_skill(s) for s in student_skills]
+
+    for _, jn in job_normalized:
+        for sn in student_normalized:
+            if jn == sn or jn in sn or sn in jn:
+                matched += 1
+                break
+    return matched
+
+def extract_features(job_skills, verified, unverified):
+    """Extract features using fuzzy/normalized skill matching."""
     total = len(job_skills)
     if total == 0:
         return [0, 0, 0, 0, 0]
 
-    verified_matches = len(job_skills & verified)
-    unverified_matches = len(job_skills & unverified)
+    verified_matches = fuzzy_skill_match(job_skills, verified)
+    unverified_matches = fuzzy_skill_match(job_skills, unverified)
 
     return [
         verified_matches,

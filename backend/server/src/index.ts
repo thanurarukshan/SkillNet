@@ -767,13 +767,18 @@ app.get("/api/job-roles/:id/recommendations", async (req: Request, res: Response
       if (typeof verified === "string") try { verified = JSON.parse(verified); } catch { verified = []; }
       if (typeof unverified === "string") try { unverified = JSON.parse(unverified); } catch { unverified = []; }
 
-      const skillsLower = (skills as string[]).map((s: string) => s.toLowerCase());
-      const verifiedLower = (verified || []).map((s: string) => s.toLowerCase());
-      const unverifiedLower = (unverified || []).map((s: string) => s.toLowerCase());
+      const normalizeSkill = (s: string) => s.toLowerCase().trim().replace(/\.js/g, 'js').replace(/\./g, '').replace(/-/g, '').replace(/_/g, '').replace(/ /g, '');
+      const fuzzyMatch = (jobSkills: string[], studentSkills: string[]) => {
+        const studentNorm = studentSkills.map(normalizeSkill);
+        return jobSkills.filter(js => {
+          const jn = normalizeSkill(js);
+          return studentNorm.some(sn => jn === sn || jn.includes(sn) || sn.includes(jn));
+        }).length;
+      };
 
-      const vMatches = skillsLower.filter((s: string) => verifiedLower.includes(s)).length;
-      const uMatches = skillsLower.filter((s: string) => unverifiedLower.includes(s)).length;
-      const total = skillsLower.length || 1;
+      const vMatches = fuzzyMatch(skills as string[], verified || []);
+      const uMatches = fuzzyMatch(skills as string[], unverified || []);
+      const total = (skills as string[]).length || 1;
       const score = ((vMatches / total) * 70) + ((uMatches / total) * 30);
 
       return {
