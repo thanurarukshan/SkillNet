@@ -8,9 +8,23 @@
 
 ## Prerequisites
 
-- MySQL 8.0+ installed and running
-- MySQL root credentials available
+- **MySQL 8.0+** — or — **MariaDB 10.2+** installed and running
+- MySQL/MariaDB root credentials available
 - A terminal / SSH session on the server
+
+---
+
+## ⚠️ MariaDB Compatibility Notes
+
+This guide works on **both MySQL 8.0 and MariaDB 10.2+**. The SQL in this document has already been written to be compatible with both. The key differences that were accounted for:
+
+| Topic | MySQL 8.0 (original) | MariaDB-compatible (used here) |
+|---|---|---|
+| Collation | `utf8mb4_0900_ai_ci` | `utf8mb4_unicode_ci` |
+| JSON column default | `DEFAULT (JSON_ARRAY())` | `DEFAULT '[]'` |
+| JSON type | Native `JSON` | `JSON` (stored as `LONGTEXT` with validation in MariaDB 10.2+) |
+
+> **"unknown collation" error?** This happens when you paste MySQL 8.0 dump files directly into MariaDB. The collation `utf8mb4_0900_ai_ci` does not exist in MariaDB. All CREATE statements in this guide use `utf8mb4_unicode_ci` which works on both engines.
 
 ---
 
@@ -33,7 +47,7 @@ Hello_there123
 ```sql
 CREATE DATABASE IF NOT EXISTS skillnet
   CHARACTER SET utf8mb4
-  COLLATE utf8mb4_0900_ai_ci;
+  COLLATE utf8mb4_unicode_ci;
 
 -- Verify
 SHOW DATABASES LIKE 'skillnet';
@@ -100,7 +114,7 @@ CREATE TABLE IF NOT EXISTS `auth` (
   UNIQUE KEY `username` (`username`),
   KEY `idx_category` (`category`),
   KEY `idx_company_reg_no` (`company_registration_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **Column reference:**
@@ -133,7 +147,7 @@ CREATE TABLE IF NOT EXISTS `skills` (
   PRIMARY KEY (`student_id`),
   CONSTRAINT `skills_ibfk_1`
     FOREIGN KEY (`student_id`) REFERENCES `auth` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **Column reference:**
@@ -155,7 +169,7 @@ CREATE TABLE IF NOT EXISTS `teams` (
   `team_leader_id`   INT          DEFAULT NULL,
   `t_name`           VARCHAR(100) NOT NULL,
   `member_count`     INT          DEFAULT '5',
-  `current_members`  JSON         DEFAULT (JSON_ARRAY()),
+  `current_members`  JSON         DEFAULT '[]',
   `t_members`        JSON         DEFAULT NULL,
   `t_skills_req`     JSON         DEFAULT NULL,
   `created_at`       TIMESTAMP    NULL DEFAULT CURRENT_TIMESTAMP,
@@ -163,7 +177,7 @@ CREATE TABLE IF NOT EXISTS `teams` (
   KEY `idx_team_leader` (`team_leader_id`),
   CONSTRAINT `fk_team_leader`
     FOREIGN KEY (`team_leader_id`) REFERENCES `auth` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **Column reference:**
@@ -199,7 +213,7 @@ CREATE TABLE IF NOT EXISTS `team_join_requests` (
     FOREIGN KEY (`team_id`)    REFERENCES `teams` (`t_id`) ON DELETE CASCADE,
   CONSTRAINT `fk_request_student`
     FOREIGN KEY (`student_id`) REFERENCES `auth` (`id`)  ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **Column reference:**
@@ -234,7 +248,7 @@ CREATE TABLE IF NOT EXISTS `projects` (
   KEY `idx_sme_id` (`sme_id`),
   CONSTRAINT `projects_ibfk_1`
     FOREIGN KEY (`sme_id`) REFERENCES `auth` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **Column reference:**
@@ -280,7 +294,7 @@ CREATE TABLE IF NOT EXISTS `hiring_requests` (
     FOREIGN KEY (`team_id`)    REFERENCES `teams`    (`t_id`) ON DELETE CASCADE,
   CONSTRAINT `hiring_requests_ibfk_3`
     FOREIGN KEY (`sme_id`)     REFERENCES `auth`     (`id`)  ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **Column reference:**
@@ -318,7 +332,7 @@ CREATE TABLE IF NOT EXISTS `job_roles` (
   KEY `company_id` (`company_id`),
   CONSTRAINT `job_roles_ibfk_1`
     FOREIGN KEY (`company_id`) REFERENCES `auth` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **Column reference:**
@@ -360,7 +374,7 @@ CREATE TABLE IF NOT EXISTS `company_hire_requests` (
     FOREIGN KEY (`company_id`)  REFERENCES `auth`      (`id`)   ON DELETE CASCADE,
   CONSTRAINT `company_hire_requests_ibfk_3`
     FOREIGN KEY (`student_id`)  REFERENCES `auth`      (`id`)   ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **Column reference:**
@@ -390,7 +404,7 @@ CREATE TABLE IF NOT EXISTS `jobs_lsc` (
   `j_accepted`    JSON         DEFAULT NULL,
   `created_at`    TIMESTAMP    NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`j_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 **Column reference:**
@@ -418,7 +432,7 @@ CREATE TABLE IF NOT EXISTS `projects_sme` (
   `p_skills_req`  JSON         DEFAULT NULL,
   `created_at`    TIMESTAMP    NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`p_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 > **Note:** This is the older `projects_sme` table, superseded by the `projects` table. Kept for backward compatibility.
