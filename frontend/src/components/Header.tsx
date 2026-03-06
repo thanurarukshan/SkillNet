@@ -40,17 +40,11 @@ export default function Header() {
         { name: "Features", path: "/#features" },
     ];
 
-    // On landing page: transparent when at top, glassmorphism when scrolled
-    // On other pages: always solid
-    const headerBg = isLandingPage
-        ? scrolled
-            ? "rgba(255,255,255,0.85)"
-            : "transparent"
-        : "rgba(255,255,255,0.95)";
-
-    const headerShadow = scrolled || !isLandingPage ? "0 1px 3px rgba(0,0,0,0.08)" : "none";
-    const textColor = isLandingPage && !scrolled ? "white" : "#334155";
-    const logoColor = isLandingPage && !scrolled ? "white" : "#6366f1";
+    // Always show a solid header
+    const headerBg = scrolled ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.98)";
+    const headerShadow = scrolled ? "0 1px 3px rgba(0,0,0,0.08)" : "0 1px 0 rgba(226,232,240,0.6)";
+    const textColor = "#334155";
+    const logoColor = "#6366f1";
 
     return (
         <>
@@ -84,16 +78,7 @@ export default function Header() {
                                 transition: "color 0.3s",
                             }}
                         >
-                            Skill
-                            <span style={{
-                                background: isLandingPage && !scrolled
-                                    ? "linear-gradient(135deg, #c7d2fe, #e9d5ff)"
-                                    : "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                            }}>
-                                Net
-                            </span>
+                            SkillNet
                         </Typography>
 
                         {/* Mobile Menu */}
@@ -141,11 +126,7 @@ export default function Header() {
                                 transition: "color 0.3s",
                             }}
                         >
-                            Skill<span style={{
-                                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                            }}>Net</span>
+                            SkillNet
                         </Typography>
 
                         {/* Desktop Nav */}
@@ -227,7 +208,7 @@ export default function Header() {
                                             transition: "color 0.3s",
                                             "&:hover": {
                                                 backgroundColor: "transparent",
-                                                color: isLandingPage && !scrolled ? "#c7d2fe" : "#6366f1",
+                                                color: "#6366f1",
                                             },
                                         }}
                                     >
@@ -238,17 +219,13 @@ export default function Header() {
                                         onClick={() => setOpenSignup(true)}
                                         disableElevation
                                         sx={{
-                                            background: isLandingPage && !scrolled
-                                                ? "rgba(255,255,255,0.15)"
-                                                : "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                                            border: isLandingPage && !scrolled ? "1px solid rgba(255,255,255,0.3)" : "none",
-                                            backdropFilter: isLandingPage && !scrolled ? "blur(10px)" : "none",
+                                            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                            border: "none",
+                                            backdropFilter: "none",
                                             color: "white",
                                             fontWeight: 600,
                                             "&:hover": {
-                                                background: isLandingPage && !scrolled
-                                                    ? "rgba(255,255,255,0.25)"
-                                                    : "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                                                background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
                                             },
                                             transition: "all 0.3s",
                                             borderRadius: "10px",
