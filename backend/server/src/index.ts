@@ -1030,9 +1030,13 @@ app.post("/api/addSkill", async (req: Request, res: Response) => {
         [decoded.id, JSON.stringify([skill]), JSON.stringify([])]
       );
     } else {
-      // Update existing record
-      const unverified = existing[0].unverified_skills || [];
-      const verified = existing[0].verified_skills || [];
+      // Update existing record — parse JSON strings returned by MariaDB
+      let unverified = existing[0].unverified_skills || [];
+      let verified = existing[0].verified_skills || [];
+      if (typeof unverified === "string") { try { unverified = JSON.parse(unverified); } catch { unverified = []; } }
+      if (typeof verified === "string") { try { verified = JSON.parse(verified); } catch { verified = []; } }
+      if (!Array.isArray(unverified)) unverified = [];
+      if (!Array.isArray(verified)) verified = [];
 
       // Check if skill already exists in either list
       if (unverified.includes(skill) || verified.includes(skill)) {
@@ -1076,8 +1080,13 @@ app.put("/api/verifySkill", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "No skills found" });
     }
 
-    const unverified = rows[0].unverified_skills || [];
-    const verified = rows[0].verified_skills || [];
+    // Parse JSON strings returned by MariaDB
+    let unverified = rows[0].unverified_skills || [];
+    let verified = rows[0].verified_skills || [];
+    if (typeof unverified === "string") { try { unverified = JSON.parse(unverified); } catch { unverified = []; } }
+    if (typeof verified === "string") { try { verified = JSON.parse(verified); } catch { verified = []; } }
+    if (!Array.isArray(unverified)) unverified = [];
+    if (!Array.isArray(verified)) verified = [];
 
     // Check if skill exists in unverified list
     const index = unverified.indexOf(skill);
@@ -1124,8 +1133,13 @@ app.delete("/api/removeSkill", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "No skills found" });
     }
 
-    const unverified = rows[0].unverified_skills || [];
-    const verified = rows[0].verified_skills || [];
+    // Parse JSON strings returned by MariaDB
+    let unverified = rows[0].unverified_skills || [];
+    let verified = rows[0].verified_skills || [];
+    if (typeof unverified === "string") { try { unverified = JSON.parse(unverified); } catch { unverified = []; } }
+    if (typeof verified === "string") { try { verified = JSON.parse(verified); } catch { verified = []; } }
+    if (!Array.isArray(unverified)) unverified = [];
+    if (!Array.isArray(verified)) verified = [];
 
     if (type === "verified") {
       const index = verified.indexOf(skill);
@@ -1205,12 +1219,14 @@ app.get("/api/getMyTeams", async (req: Request, res: Response) => {
     const token = authHeader.split(" ")[1];
     const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
 
+    // Fetch all teams where user is leader OR a member
+    // JSON_CONTAINS is avoided here for MariaDB compatibility — filter in application layer
     const [rows]: any = await pool.query(
       `SELECT t.*, a.name as leader_name 
        FROM teams t
        JOIN auth a ON t.team_leader_id = a.id
-       WHERE t.team_leader_id = ? OR JSON_CONTAINS(t.current_members, ?, '$')`,
-      [decoded.id, JSON.stringify({ id: decoded.id })]
+       WHERE t.team_leader_id = ? OR t.current_members LIKE ?`,
+      [decoded.id, `%"id":${decoded.id}%`]
     );
 
     res.json({ teams: rows });
@@ -1360,8 +1376,10 @@ app.put("/api/removeMember/:teamId/:studentId", async (req: Request, res: Respon
       return res.status(403).json({ error: "Only team leader can remove members" });
     }
 
-    // Remove member from current_members
-    const members = team[0].current_members || [];
+    // Remove member from current_members — parse JSON string for MariaDB compatibility
+    let members = team[0].current_members || [];
+    if (typeof members === "string") { try { members = JSON.parse(members); } catch { members = []; } }
+    if (!Array.isArray(members)) members = [];
     const updatedMembers = members.filter((m: any) => m.id !== parseInt(studentId));
 
     await pool.query(
@@ -1399,8 +1417,10 @@ app.post("/api/leaveTeam/:teamId", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Team leader cannot leave team. Delete team instead." });
     }
 
-    // Remove user from current_members
-    const members = team[0].current_members || [];
+    // Remove user from current_members — parse JSON string for MariaDB compatibility
+    let members = team[0].current_members || [];
+    if (typeof members === "string") { try { members = JSON.parse(members); } catch { members = []; } }
+    if (!Array.isArray(members)) members = [];
     const updatedMembers = members.filter((m: any) => m.id !== decoded.id);
 
     await pool.query(
@@ -1483,8 +1503,10 @@ app.post("/api/requestJoinTeam/:teamId", async (req: Request, res: Response) => 
       return res.status(404).json({ error: "Team not found" });
     }
 
-    // Check if already a member
-    const members = team[0].current_members || [];
+    // Check if already a member — parse JSON string for MariaDB compatibility
+    let members = team[0].current_members || [];
+    if (typeof members === "string") { try { members = JSON.parse(members); } catch { members = []; } }
+    if (!Array.isArray(members)) members = [];
     if (members.some((m: any) => m.id === decoded.id)) {
       return res.status(400).json({ error: "Already a member of this team" });
     }
@@ -1586,8 +1608,10 @@ app.put("/api/approveRequest/:requestId", async (req: Request, res: Response) =>
       return res.status(403).json({ error: "Only team leader can approve requests" });
     }
 
-    // Check if team is full
-    const members = team[0].current_members || [];
+    // Check if team is full — parse JSON string for MariaDB compatibility
+    let members = team[0].current_members || [];
+    if (typeof members === "string") { try { members = JSON.parse(members); } catch { members = []; } }
+    if (!Array.isArray(members)) members = [];
     if (members.length >= team[0].member_count) {
       return res.status(400).json({ error: "Team is full" });
     }
@@ -1683,14 +1707,21 @@ app.get("/api/getTeamRecommendations", async (req: Request, res: Response) => {
       [decoded.id]
     );
 
-    if (!skillsRow.length || !skillsRow[0].verified_skills || skillsRow[0].verified_skills.length === 0) {
+    // Parse verified_skills — MariaDB returns JSON columns as strings
+    let verifiedSkillsParsed = skillsRow[0].verified_skills;
+    if (typeof verifiedSkillsParsed === "string") {
+      try { verifiedSkillsParsed = JSON.parse(verifiedSkillsParsed); } catch { verifiedSkillsParsed = []; }
+    }
+    if (!Array.isArray(verifiedSkillsParsed)) verifiedSkillsParsed = [];
+
+    if (!skillsRow.length || !verifiedSkillsParsed || verifiedSkillsParsed.length === 0) {
       return res.json({
         recommendations: [],
         message: "No verified skills found. Add and verify skills to get recommendations."
       });
     }
 
-    const verifiedSkills = skillsRow[0].verified_skills.join(" ");
+    const verifiedSkills = verifiedSkillsParsed.join(" ");
 
     // Call ML API for team recommendations
     const mlApiUrl = process.env.ML_API_URL || "http://localhost:5002";
