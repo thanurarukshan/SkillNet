@@ -725,7 +725,7 @@ app.get("/api/job-roles/:id/recommendations", async (req: Request, res: Response
 
     // Call recruiter engine ML model
     try {
-      const recruiterUrl = process.env.RECRUITER_ENGINE_URL || "http://localhost:5004";
+      const recruiterUrl = process.env.RECRUITER_ENGINE_URL || "http://127.0.0.1:5004";
       const mlResponse = await fetch(`${recruiterUrl}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1724,7 +1724,7 @@ app.get("/api/getTeamRecommendations", async (req: Request, res: Response) => {
     const verifiedSkills = verifiedSkillsParsed.join(" ");
 
     // Call ML API for team recommendations
-    const mlApiUrl = process.env.ML_API_URL || "http://localhost:5002";
+    const mlApiUrl = process.env.ML_API_URL || "http://127.0.0.1:5002";
     const mlResponse = await fetch(`${mlApiUrl}/ml/recommend`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2090,7 +2090,7 @@ app.get("/api/projects/:id/recommendations", async (req: Request, res: Response)
     const skillsString = projectSkills.join(" ");
 
     // Call ML API for project-team matching
-    const mlApiUrl = process.env.ML_API_URL_PROJECT || "http://localhost:5003";
+    const mlApiUrl = process.env.ML_API_URL_PROJECT || "http://127.0.0.1:5003";
     const mlResponse = await fetch(`${mlApiUrl}/ml/recommend`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
