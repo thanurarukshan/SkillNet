@@ -985,7 +985,18 @@ app.get("/api/getStudentSkills", async (req: Request, res: Response) => {
       });
     }
 
-    res.json(rows[0]);
+    const row = rows[0];
+    // Parse JSON string fields — MySQL/MariaDB may return JSON columns as strings
+    if (typeof row.verified_skills === "string") {
+      try { row.verified_skills = JSON.parse(row.verified_skills); } catch { row.verified_skills = []; }
+    }
+    if (typeof row.unverified_skills === "string") {
+      try { row.unverified_skills = JSON.parse(row.unverified_skills); } catch { row.unverified_skills = []; }
+    }
+    if (!Array.isArray(row.verified_skills)) row.verified_skills = [];
+    if (!Array.isArray(row.unverified_skills)) row.unverified_skills = [];
+
+    res.json(row);
   } catch (err) {
     console.error("GetStudentSkills Error:", err);
     res.status(500).json({ error: "Server error" });

@@ -139,8 +139,8 @@ export default function StudentDashboard() {
 
       const data = await res.json();
       if (res.ok) {
-        setVerifiedSkills(data.verified_skills || []);
-        setUnverifiedSkills(data.unverified_skills || []);
+        setVerifiedSkills(Array.isArray(data.verified_skills) ? data.verified_skills : []);
+        setUnverifiedSkills(Array.isArray(data.unverified_skills) ? data.unverified_skills : []);
       }
     } catch (err) {
       console.error("Error fetching skills:", err);
