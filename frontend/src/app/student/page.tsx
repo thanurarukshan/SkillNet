@@ -458,7 +458,7 @@ export default function StudentDashboard() {
               transition: "all 0.3s ease",
             }}>
               <Typography variant="h6" mb={2} sx={{ display: "flex", alignItems: "center" }}>
-                ✓ Verified Skills
+                ✓ Skills
                 <Chip label={verifiedSkills.length} size="small" sx={{ ml: 2 }} color="success" />
               </Typography>
               {verifiedSkills.length > 0 ? (
@@ -483,7 +483,6 @@ export default function StudentDashboard() {
             {/* Unverified Skills */}
             <Card sx={{ maxWidth: 900, mx: "auto", mb: 3, p: 3, borderRadius: 3, borderLeft: "5px solid #f59e0b", minHeight: 100, "&:hover": { boxShadow: 4 }, transition: "all 0.3s ease" }}>
               <Typography variant="h6" mb={2} sx={{ display: "flex", alignItems: "center" }}>
-                ⏳ Unverified Skills
                 <Chip label={unverifiedSkills.length} size="small" sx={{ ml: 2 }} color="warning" />
               </Typography>
               {unverifiedSkills.length > 0 ? (
