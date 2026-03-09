@@ -29,8 +29,8 @@ def fuzzy_skill_match(job_skills, student_skills):
 
     for _, jn in job_normalized:
         for sn in student_normalized:
-            # Check if either contains the other, or they are equal
-            if jn == sn or jn in sn or sn in jn:
+            # Check if they are equal after normalization
+            if jn == sn:
                 matched += 1
                 break
     return matched
