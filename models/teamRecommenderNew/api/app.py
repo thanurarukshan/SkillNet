@@ -29,19 +29,26 @@ db_config = {
 }
 
 
-def get_skill_vector(skills_text):
-    """Convert a skills string into a single vector by averaging word vectors."""
-    tokens = skills_text.lower().replace(",", " ").replace("[", "").replace("]", "").replace('"', '').split()
-    tokens = [t.strip() for t in tokens if t.strip()]
+def normalize_skill(skill):
+    """Normalize a skill name for comparison: lowercase, strip punctuation."""
+    import re
+    return re.sub(r'[^a-z0-9]', '', skill.lower().strip())
 
-    if not tokens:
+
+def get_skill_vector(skills_list):
+    """Convert a list of skill strings into a single vector by averaging word vectors."""
+    if isinstance(skills_list, str):
+        # Legacy: split string input
+        tokens = skills_list.lower().replace(",", " ").replace("[", "").replace("]", "").replace('"', '').split()
+        skills_list = [t.strip() for t in tokens if t.strip()]
+
+    if not skills_list:
         return np.zeros(model.wv.vector_size)
 
     vectors = []
-    for token in tokens:
+    for skill in skills_list:
+        token = skill.lower().strip()
         try:
-            # FastText can generate vectors for ANY word (even unseen)
-            # thanks to character n-gram / subword decomposition
             vec = model.wv[token]
             vectors.append(vec)
         except Exception:
@@ -51,6 +58,45 @@ def get_skill_vector(skills_text):
         return np.zeros(model.wv.vector_size)
 
     return np.mean(vectors, axis=0)
+
+
+def compute_overlap_score(input_skills, team_skills):
+    """
+    Compute a whole-word overlap score between input skills and team skills.
+    This prevents FastText subword fragments (e.g. "ode" matching "node.js")
+    from producing false-positive recommendations.
+
+    Rules:
+    - Short tokens (< 4 chars): require EXACT normalized match only.
+    - Longer tokens: match if either skill starts with the other (prefix match)
+      or if they share exact normalized form.
+    Returns a float in [0.0, 1.0].
+    """
+    if not input_skills or not team_skills:
+        return 0.0
+
+    norm_input = [normalize_skill(s) for s in input_skills if s.strip()]
+    norm_team = [normalize_skill(s) for s in team_skills if s.strip()]
+
+    matched = 0
+    for inp in norm_input:
+        if not inp:
+            continue
+        for team_s in norm_team:
+            if not team_s:
+                continue
+            if len(inp) < 4:
+                # Short token: only exact match counts (prevents "js" matching "javascript" etc.)
+                if inp == team_s:
+                    matched += 1
+                    break
+            else:
+                # Longer token: exact match OR one starts with the other (e.g. "nodejs" vs "node")
+                if inp == team_s or team_s.startswith(inp) or inp.startswith(team_s):
+                    matched += 1
+                    break
+
+    return matched / len(norm_input)
 
 
 def fetch_teams_from_db():
@@ -94,7 +140,10 @@ def recommend():
     if not data or "skills" not in data:
         return jsonify({"error": "Please provide 'skills' in JSON body"}), 400
 
-    input_skills = data["skills"]  # e.g., "react node.js typescript"
+    input_skills = data["skills"]  # list of skill strings
+    if isinstance(input_skills, str):
+        input_skills = [s.strip() for s in input_skills.replace(",", " ").split() if s.strip()]
+
     top_n = data.get("top_n", 5)
     min_similarity = data.get("min_similarity", 0.1)
 
@@ -127,21 +176,32 @@ def recommend():
     results = []
     for team in teams:
         team_skills = parse_skills(team["t_skills_req"])
-        skills_text = " ".join(team_skills)
-        team_vector = get_skill_vector(skills_text).reshape(1, -1)
+        team_vector = get_skill_vector(team_skills).reshape(1, -1)
 
         # Skip teams with zero vectors
         if np.allclose(team_vector, 0):
             continue
 
-        similarity = cosine_similarity(input_vector, team_vector)[0][0]
+        # Stage 1: cosine similarity (semantic)
+        cosine_score = float(cosine_similarity(input_vector, team_vector)[0][0])
 
-        if similarity >= min_similarity:
+        # Stage 2: whole-word overlap filter
+        # Prevents subword fragments (e.g. "ode" matching "node.js") from ranking high
+        overlap_score = compute_overlap_score(input_skills, team_skills)
+
+        # Require at least some meaningful overlap — purely semantic fragment matches are excluded
+        if overlap_score == 0.0:
+            continue
+
+        # Blend: 60% semantic similarity + 40% exact overlap
+        final_score = (cosine_score * 0.6) + (overlap_score * 0.4)
+
+        if final_score >= min_similarity:
             results.append({
                 "t_id": team["t_id"],
                 "t_name": team["t_name"],
                 "t_skills_req": team["t_skills_req"],
-                "similarity_score": round(float(similarity), 4),
+                "similarity_score": round(final_score, 4),
                 "leader_name": team["leader_name"],
                 "team_leader_id": team["team_leader_id"],
                 "member_count": team["member_count"],
