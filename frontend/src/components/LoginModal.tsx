@@ -29,6 +29,13 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     const { login } = useAuth();
     const router = useRouter();
 
+    const handleClose = () => {
+        setEmail("");
+        setPassword("");
+        setRoleTab(0);
+        onClose();
+    };
+
     const handleSignIn = async () => {
         const payload = { email, password };
 
@@ -63,7 +70,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={handleClose}
             maxWidth="xs"
             fullWidth
             PaperProps={{
@@ -83,7 +90,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
                 }}
             >
                 <IconButton
-                    onClick={onClose}
+                    onClick={handleClose}
                     sx={{
                         position: "absolute",
                         top: 8,
@@ -130,6 +137,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
                         onChange={(e) => setEmail(e.target.value)}
                         variant="outlined"
                         size="medium"
+                        inputProps={{ autoComplete: "new-password" }}
                     />
                     <TextField
                         label="Password"
@@ -139,6 +147,7 @@ export default function LoginModal({ open, onClose }: LoginModalProps) {
                         onChange={(e) => setPassword(e.target.value)}
                         variant="outlined"
                         size="medium"
+                        inputProps={{ autoComplete: "new-password" }}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") handleSignIn();
                         }}

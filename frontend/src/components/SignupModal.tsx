@@ -45,6 +45,22 @@ export default function SignupModal({ open, onClose, onSwitchToSignIn }: SignupM
         return "Company";
     };
 
+    const handleClose = () => {
+        setEmail("");
+        setPassword("");
+        setName("");
+        setDepartment("");
+        setAcademicYear("");
+        setCompanyRegistrationNo("");
+        setCompanyType("");
+        setCompanyIndustry("");
+        setSmeRegistrationNo("");
+        setBusinessType("");
+        setSmeIndustry("");
+        setRoleTab(0);
+        onClose();
+    };
+
     interface SignupPayload {
         role: string;
         name: string;
@@ -107,7 +123,7 @@ export default function SignupModal({ open, onClose, onSwitchToSignIn }: SignupM
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={handleClose}
             maxWidth="xs"
             fullWidth
             PaperProps={{
@@ -127,7 +143,7 @@ export default function SignupModal({ open, onClose, onSwitchToSignIn }: SignupM
                 }}
             >
                 <IconButton
-                    onClick={onClose}
+                    onClick={handleClose}
                     sx={{
                         position: "absolute",
                         top: 8,
@@ -172,6 +188,7 @@ export default function SignupModal({ open, onClose, onSwitchToSignIn }: SignupM
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         size="medium"
+                        inputProps={{ autoComplete: "new-password" }}
                     />
                     <TextField
                         label="Email"
@@ -180,6 +197,7 @@ export default function SignupModal({ open, onClose, onSwitchToSignIn }: SignupM
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         size="medium"
+                        inputProps={{ autoComplete: "new-password" }}
                     />
                     <TextField
                         label="Password"
@@ -188,6 +206,7 @@ export default function SignupModal({ open, onClose, onSwitchToSignIn }: SignupM
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         size="medium"
+                        inputProps={{ autoComplete: "new-password" }}
                     />
 
                     {/* Student fields */}
@@ -302,7 +321,7 @@ export default function SignupModal({ open, onClose, onSwitchToSignIn }: SignupM
                     Already have an account?{" "}
                     <Box
                         component="span"
-                        onClick={onSwitchToSignIn}
+                        onClick={() => { handleClose(); onSwitchToSignIn(); }}
                         sx={{
                             color: "#6366f1",
                             fontWeight: 600,

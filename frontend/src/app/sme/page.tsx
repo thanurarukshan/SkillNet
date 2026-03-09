@@ -448,9 +448,9 @@ export default function SmeDashboard() {
         <Box maxWidth={1000} mx="auto" mb={4}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             {[
-              { icon: "🚀", title: "Project Management", desc: "Create and manage projects with specific skill requirements and find the best-fit teams using AI." },
-              { icon: "🧠", title: "AI Team Matching", desc: "Our FastText ML engine finds teams whose skills align with your project requirements using deep embeddings." },
-              { icon: "✅", title: "Skill Verification", desc: "Verify student skills to improve overall match quality and ensure high standards across the platform." },
+              { icon: "→", title: "Project Management", desc: "Create and manage projects with specific skill requirements and find the best-fit teams using AI." },
+              { icon: "AI", title: "AI Team Matching", desc: "Our FastText ML engine finds teams whose skills align with your project requirements using deep embeddings." },
+              { icon: "✓", title: "Skill Verification", desc: "Verify student skills to improve overall match quality and ensure high standards across the platform." },
             ].map((info, idx) => (
               <Card
                 key={idx}
@@ -850,7 +850,7 @@ export default function SmeDashboard() {
                 <>
                   <Box>
                     <Typography variant="h6" fontWeight="bold" mb={2}>
-                      🤖 AI Project Matcher
+                      AI Project Matcher
                     </Typography>
                     {loadingRecs ? (
                       <Box textAlign="center" py={3}>

@@ -32,7 +32,7 @@ import {
     Search,
     Add,
     Groups,
-    EmojiEvents,
+    Star,
     PersonAdd,
     ArrowBack,
     Business,
@@ -135,8 +135,11 @@ export default function TeamsPage() {
             const data = await res.json();
             console.log("Recommendations API Response:", data);
             if (res.ok) {
-                setRecommendations(data.recommendations || []);
-                console.log("Recommendations set:", data.recommendations);
+                const sorted = (data.recommendations || []).sort(
+                    (a: Team, b: Team) => (b.similarity_score ?? 0) - (a.similarity_score ?? 0)
+                );
+                setRecommendations(sorted);
+                console.log("Recommendations set (sorted):", sorted);
             } else {
                 console.error("Recommendations API error:", data);
             }
@@ -390,14 +393,12 @@ export default function TeamsPage() {
                                 <Typography variant="h6" fontWeight="bold">
                                     {team.t_name}
                                 </Typography>
-                                {team.similarity_score !== undefined && (
-                                    <Chip
-                                        label={`${(team.similarity_score * 100).toFixed(0)}% Match`}
-                                        size="small"
-                                        color="success"
-                                        icon={<EmojiEvents />}
-                                    />
-                                )}
+                                <Chip
+                                    label={`${(team.similarity_score * 100).toFixed(0)}% Match`}
+                                    size="small"
+                                    color="success"
+                                    icon={<Star />}
+                                />
                             </Stack>
                             <Typography variant="body2" color="text.secondary">
                                 Led by {team.leader_name}
@@ -581,7 +582,7 @@ export default function TeamsPage() {
                         {/* ML Recommendations */}
                         <Box>
                             <Typography variant="h6" mb={2}>
-                                🤖 AI Recommended Teams
+                                AI Recommended Teams
                             </Typography>
                             {recommendationsLoading ? (
                                 <Card sx={{ p: 6, textAlign: "center" }}>
@@ -796,7 +797,7 @@ export default function TeamsPage() {
                                                     ) : request.status === 'accepted' ? (
                                                         <Alert severity="success">
                                                             <Typography variant="body2">
-                                                                ✅ This project is now assigned to your team!
+                                                                This project is now assigned to your team!
                                                             </Typography>
                                                         </Alert>
                                                     ) : (

@@ -79,11 +79,15 @@ def recruiter_engine_ml(job_input):
         unverified = json.loads(stu["unverified_skills"]) if isinstance(stu["unverified_skills"], str) else (stu["unverified_skills"] or [])
 
         features = extract_features(job_skills, verified, unverified)
-        # Use deterministic scoring based on skill match ratios
-        # features = [verified_matches, unverified_matches, total, verified_ratio, unverified_ratio]
-        verified_ratio = features[3]   # verified_matches / total
-        unverified_ratio = features[4] # unverified_matches / total
-        score = (verified_ratio * 70) + (unverified_ratio * 30)
+        verified_matches = features[0]
+        unverified_matches = features[1]
+        total = features[2]
+        # Weighted coverage: verified skills count fully (1.0), unverified count half (0.5)
+        # A student with 100% verified skills gets 100%, 100% unverified gets 50%
+        if total > 0:
+            score = min((verified_matches * 1.0 + unverified_matches * 0.5) / total * 100, 100.0)
+        else:
+            score = 0.0
 
         # Only include students with score > 0
         if score > 0:

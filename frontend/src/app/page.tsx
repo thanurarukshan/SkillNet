@@ -109,7 +109,7 @@ export default function Home() {
         <div className="relative z-10 max-w-4xl mx-auto">
           <Box sx={{ mb: 3 }}>
             <span className="inline-block px-4 py-1.5 rounded-full text-sm font-semibold bg-white/10 text-indigo-300 border border-indigo-400/30 backdrop-blur-sm">
-              ✨ Powered by Custom-Trained AI Models
+              Powered by Custom-Trained AI Models
             </span>
           </Box>
 
@@ -421,7 +421,7 @@ export default function Home() {
                 &gt; similarity(&quot;docker&quot;, &quot;dockerize&quot;) = <span style={{ color: "#34d399" }}>0.913</span>
               </Typography>
               <Typography sx={{ fontFamily: "inherit", fontSize: "inherit", mt: 1, color: "#818cf8" }}>
-                # Handles unseen words via subword decomposition ✨
+                # Handles unseen words via subword decomposition
               </Typography>
             </Box>
           </div>

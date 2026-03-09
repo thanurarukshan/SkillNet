@@ -29,7 +29,7 @@ import { useRouter } from "next/navigation";
 
 const PROJECT_INFO = [
   { icon: "🎯", title: "AI-Powered Matching", desc: "Our FastText AI models match your skills to the best-fit teams and projects automatically." },
-  { icon: "✅", title: "Skill Verification", desc: "Get your skills verified by SMEs to boost credibility and improve your AI match scores." },
+  { icon: "✓", title: "Skill Verification", desc: "Get your skills verified by SMEs to boost credibility and improve your AI match scores." },
   { icon: "💼", title: "Direct Job Offers", desc: "Companies discover you based on your skills and send you job offers directly through the platform." },
 ];
 
@@ -550,7 +550,7 @@ export default function StudentDashboard() {
             {/* Skills Info */}
             <Card sx={{ maxWidth: 900, mx: "auto", p: 2, bgcolor: "#f0f9ff" }}>
               <Typography variant="body2" color="text.secondary">
-                💡 <strong>Tip:</strong> Verify your skills to improve team recommendations and increase your visibility to employers.
+                <strong>Tip:</strong> Verify your skills to improve team recommendations and increase your visibility to employers.
               </Typography>
             </Card>
           </Box>
