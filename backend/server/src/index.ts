@@ -720,7 +720,10 @@ app.get("/api/job-roles/:id/recommendations", async (req: Request, res: Response
     const role = roles[0];
     let skills = role.skills_required;
     if (typeof skills === "string") {
-      try { skills = JSON.parse(skills); } catch { skills = []; }
+      try { skills = JSON.parse(skills); } catch { skills = [skills]; }
+    }
+    if (!Array.isArray(skills)) {
+      skills = [skills].filter(Boolean);
     }
 
     // Call recruiter engine ML model
@@ -767,19 +770,22 @@ app.get("/api/job-roles/:id/recommendations", async (req: Request, res: Response
       if (typeof verified === "string") try { verified = JSON.parse(verified); } catch { verified = []; }
       if (typeof unverified === "string") try { unverified = JSON.parse(unverified); } catch { unverified = []; }
 
-      const normalizeSkill = (s: string) => s.toLowerCase().trim().replace(/\.js/g, 'js').replace(/\./g, '').replace(/-/g, '').replace(/_/g, '').replace(/ /g, '');
-      const fuzzyMatch = (jobSkills: string[], studentSkills: string[]) => {
+      const normalizeSkill = (s: string) => s.toLowerCase().trim().replace(/\.js/g, 'js').replace(/[^a-z0-9]/g, '');
+      const exactMatch = (jobSkills: string[], studentSkills: string[]) => {
         const studentNorm = studentSkills.map(normalizeSkill);
         return jobSkills.filter(js => {
           const jn = normalizeSkill(js);
-          return studentNorm.some(sn => jn === sn || jn.includes(sn) || sn.includes(jn));
+          return studentNorm.some(sn => jn === sn);
         }).length;
       };
 
-      const vMatches = fuzzyMatch(skills as string[], verified || []);
-      const uMatches = fuzzyMatch(skills as string[], unverified || []);
+      const vMatches = exactMatch(skills as string[], verified || []);
+      const uMatches = exactMatch(skills as string[], unverified || []);
       const total = (skills as string[]).length || 1;
-      const score = ((vMatches / total) * 70) + ((uMatches / total) * 30);
+      
+      // True coverage: verified counts as 1.0, unverified as 0.5
+      let score = ((vMatches * 1.0 + uMatches * 0.5) / total) * 100;
+      score = Math.min(score, 100.0);
 
       return {
         student_id: stu.student_id,
